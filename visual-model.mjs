@@ -1,3 +1,5 @@
+export const MAX_DIGEST_ITEMS = 5;
+
 export function buildProjectParentGroups(threads) {
   const projects = new Map();
   for (const thread of threads) {
@@ -203,6 +205,33 @@ function parentGroupRadius(childCount) {
   return outer.radius + 0.48 * outer.scale;
 }
 
+function compareDigestThreads(left, right) {
+  const updatedDelta = (right.updated_at_ms || 0) - (left.updated_at_ms || 0);
+  if (updatedDelta !== 0) {
+    return updatedDelta;
+  }
+  const idDelta = String(left.id || "").localeCompare(String(right.id || ""));
+  if (idDelta !== 0) {
+    return idDelta;
+  }
+  return String(left.title || "").localeCompare(String(right.title || ""));
+}
+
+function toDigestItem(thread) {
+  return {
+    id: thread.id,
+    nickname: thread.nickname,
+    title: thread.title,
+    role: thread.role,
+    project: thread.project,
+    parent_id: thread.parent_id,
+    parent_title: thread.parent_title,
+    updated_at_ms: thread.updated_at_ms,
+    age_seconds: thread.age_seconds,
+    last_response_snippet: thread.last_response_snippet,
+  };
+}
+
 function buildParentGroup(project, parentId, threads) {
   const ordered = threads
     .slice()
@@ -210,6 +239,13 @@ function buildParentGroup(project, parentId, threads) {
   const parentThread = ordered.find((thread) => thread.id === parentId);
   const latestThread = ordered[0];
   const children = ordered.filter((thread) => thread.id !== parentId);
+  const finishedChildren = children.filter((thread) => thread.state === "DONE");
+  const latestFinishedAt = Math.max(0, ...finishedChildren.map((thread) => thread.updated_at_ms || 0));
+  const digestItems = finishedChildren
+    .slice()
+    .sort(compareDigestThreads)
+    .slice(0, MAX_DIGEST_ITEMS)
+    .map(toDigestItem);
   const title =
     parentThread?.title ||
     latestThread?.parent_title ||
@@ -239,6 +275,10 @@ function buildParentGroup(project, parentId, threads) {
     title,
     lead,
     children,
+    finishedChildren,
+    finishedCount: finishedChildren.length,
+    latestFinishedAt,
+    digestItems,
     threads: ordered,
     latestUpdated,
     isActive,
