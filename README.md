@@ -1,5 +1,7 @@
 # Codims
 
+[![CI](https://github.com/jdelaire/codims/actions/workflows/ci.yml/badge.svg)](https://github.com/jdelaire/codims/actions/workflows/ci.yml)
+
 Codims is a local 3D monitor for Codex threads and subagents. It renders projects as rooms, main threads as larger characters, and child agents as smaller workers around them.
 
 The app is intentionally small:
