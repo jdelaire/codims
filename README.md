@@ -85,6 +85,10 @@ It reads Codex thread metadata and content from your local Codex app-server proc
 
 Do not commit local Codex state databases, `.env` files, logs, keys, screenshots with private content, or exported thread dumps.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 MIT
