@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Codims</title>
+    <link rel="stylesheet" href="./style.css">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.166.1/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.166.1/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <h1>Codims</h1>
+        <p id="statusText">Loading Codex rooms...</p>
+      </div>
+      <div class="counters" aria-label="Codims counters">
+        <div class="counter">
+          <span id="activeCount">0</span>
+          <span class="counter-label">active now</span>
+        </div>
+        <div class="counter">
+          <span id="visibleCount">0</span>
+          <span class="counter-label">visible threads</span>
+        </div>
+        <div class="counter">
+          <span id="projectCount">0</span>
+          <span class="counter-label">projects</span>
+        </div>
+      </div>
+      <form class="controls" id="controls">
+        <label>
+          Active window
+          <input id="activeMinutes" name="activeMinutes" type="number" min="1" step="1" value="5">
+          <span>min</span>
+        </label>
+        <label>
+          Max age
+          <input id="maxAgeHours" name="maxAgeHours" type="number" min="0" step="1" value="12">
+          <span>h</span>
+        </label>
+        <button id="liveToggle" type="button" aria-pressed="true">Live</button>
+        <button id="labelsToggle" type="button" aria-pressed="true">Labels</button>
+        <button id="inactiveToggle" type="button" aria-pressed="false">Show idle</button>
+      </form>
+    </header>
+
+    <main class="app-layout">
+      <section class="scene-shell" aria-label="3D Codex worker rooms">
+        <div id="scene"></div>
+        <div id="labels" class="labels-layer"></div>
+        <div id="emptyState" class="empty-state" hidden>No recent open subagent threads.</div>
+      </section>
+
+      <aside class="details-panel" aria-label="Thread details">
+        <div id="detailsEmpty" class="details-empty">
+          Click a worker to inspect its thread.
+        </div>
+        <div id="detailsContent" class="details-content" hidden>
+          <div class="details-heading">
+            <h2 id="detailNickname"></h2>
+            <span id="detailState"></span>
+          </div>
+          <dl>
+            <dt>Role</dt>
+            <dd id="detailRole"></dd>
+            <dt>Project</dt>
+            <dd id="detailProject"></dd>
+            <dt>Age</dt>
+            <dd id="detailAge"></dd>
+            <dt>Title / content</dt>
+            <dd id="detailTitle" class="wrapped"></dd>
+            <dt>Agent prompt + last response</dt>
+            <dd id="detailThreadContent" class="wrapped thread-content"></dd>
+            <dt>Parent thread</dt>
+            <dd id="detailParent" class="wrapped"></dd>
+            <dt>CWD</dt>
+            <dd id="detailCwd" class="wrapped mono"></dd>
+            <dt>Thread id</dt>
+            <dd id="detailId" class="wrapped mono"></dd>
+          </dl>
+          <form id="threadMessageForm" class="thread-message" hidden>
+            <label for="threadMessageInput">Send to main thread</label>
+            <textarea
+              id="threadMessageInput"
+              rows="4"
+              placeholder="Message this thread"
+            ></textarea>
+            <div class="thread-message-actions">
+              <button id="threadMessageSubmit" type="submit">Send</button>
+              <span id="threadMessageStatus" role="status"></span>
+            </div>
+          </form>
+        </div>
+      </aside>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
