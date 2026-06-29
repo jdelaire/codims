@@ -27,7 +27,6 @@ The app is intentionally small:
 - macOS or another local environment with Codex CLI installed.
 - Python 3.11 or newer.
 - A browser with WebGL.
-- Network access to `unpkg.com` for Three.js modules, unless you vendor those files locally.
 
 ## Run
 
@@ -81,7 +80,7 @@ Message sending is guarded server-side and only works when the request role is `
 
 Codims is local-first. It does not run a hosted backend and does not require API keys.
 
-It reads Codex thread metadata and content from your local Codex app-server process. The browser downloads Three.js from `unpkg.com` by default. If you need fully offline use, vendor the Three.js files and update the import map in `index.html`.
+It reads Codex thread metadata and content from your local Codex app-server process. Three.js is vendored under `vendor/three/` so Codims can run without a build step or CDN dependency.
 
 Do not commit local Codex state databases, `.env` files, logs, keys, screenshots with private content, or exported thread dumps.
 
