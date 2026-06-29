@@ -27,6 +27,16 @@ SUBAGENT_SOURCE_KINDS = [
     "subAgentOther",
 ]
 THREAD_SOURCE_KINDS = INTERACTIVE_SOURCE_KINDS + SUBAGENT_SOURCE_KINDS
+COMPLETED_TURN_STATUSES = {"completed"}
+TERMINAL_TURN_STATUSES = {
+    "completed",
+    "failed",
+    "cancelled",
+    "canceled",
+    "interrupted",
+}
+LAST_RESPONSE_SNIPPET_LIMIT = 280
+NO_RESPONSE_CAPTURED = "No response captured"
 
 
 class AppServerError(Exception):
@@ -43,6 +53,9 @@ class RawThread:
     updated_at_ms: int
     parent_id: str
     parent_title: str
+    completed: bool = False
+    terminal: bool = False
+    last_response_snippet: str = NO_RESPONSE_CAPTURED
 
 
 class CodexAppServerClient:
@@ -193,7 +206,11 @@ def age_seconds(updated_at_ms, now_ms):
     return max(0, int((now_ms - updated_at_ms) / 1000))
 
 
-def classify_thread(updated_at_ms, now_ms, active_minutes):
+def classify_thread(updated_at_ms, now_ms, active_minutes, completed=False, terminal=False):
+    if completed:
+        return "DONE", "idle"
+    if terminal:
+        return "RECENT", "idle"
     age = age_seconds(updated_at_ms, now_ms)
     if age <= 60:
         return "ACTIVE", "energetic"
@@ -312,6 +329,55 @@ def read_parent_title(client, parent_id):
     return app_server_thread_title(thread)
 
 
+def turn_status(turn):
+    status = turn.get("status") if isinstance(turn, dict) else None
+    if isinstance(status, dict):
+        return str(status.get("type") or "").lower()
+    if status:
+        return str(status).lower()
+    lifecycle = turn.get("lifecycle") if isinstance(turn, dict) else None
+    if isinstance(lifecycle, dict):
+        return str(lifecycle.get("status") or lifecycle.get("type") or "").lower()
+    return ""
+
+
+def latest_turn_lifecycle(thread):
+    turns = thread.get("turns") or []
+    latest_turn = turns[-1] if turns else {}
+    status = turn_status(latest_turn)
+    completed = status in COMPLETED_TURN_STATUSES
+    terminal = status in TERMINAL_TURN_STATUSES
+    return completed, terminal
+
+
+def collapse_text(text):
+    return " ".join(str(text or "").split())
+
+
+def snippet_text(text, limit=LAST_RESPONSE_SNIPPET_LIMIT):
+    collapsed = collapse_text(text)
+    if not collapsed:
+        return NO_RESPONSE_CAPTURED
+    if len(collapsed) <= limit:
+        return collapsed
+    suffix = "..."
+    return f"{collapsed[: limit - len(suffix)].rstrip()}{suffix}"
+
+
+def read_thread_lifecycle(client, thread_id):
+    try:
+        result = client.request(
+            "thread/read", {"threadId": thread_id, "includeTurns": True}
+        )
+    except (AppServerError, OSError, ValueError):
+        return False, False, NO_RESPONSE_CAPTURED
+
+    thread = result.get("thread", {}) if isinstance(result, dict) else {}
+    completed, terminal = latest_turn_lifecycle(thread)
+    _, last_response = extract_thread_prompt_and_response(thread)
+    return completed, terminal, snippet_text(last_response)
+
+
 def load_app_server_threads(client, now_ms, max_age_hours):
     app_threads = fetch_app_server_pages(client, now_ms, max_age_hours)
     visible = [
@@ -323,27 +389,43 @@ def load_app_server_threads(client, now_ms, max_age_hours):
     parent_ids = sorted({parent_thread_id(thread) for thread in visible if parent_thread_id(thread)})
     parent_titles = {parent_id: read_parent_title(client, parent_id) for parent_id in parent_ids}
 
-    return [
-        RawThread(
-            id=str(thread.get("id") or ""),
-            title=app_server_thread_title(thread),
-            nickname=app_server_thread_nickname(thread),
-            role=app_server_thread_role(thread),
-            cwd=str(thread.get("cwd") or ""),
-            updated_at_ms=timestamp_to_ms(thread.get("updatedAt")),
-            parent_id=effective_parent_id(thread),
-            parent_title=parent_titles.get(
-                parent_thread_id(thread),
-                app_server_thread_title(thread),
-            ),
+    raw_threads = []
+    for thread in visible:
+        thread_id = str(thread.get("id") or "")
+        if not thread_id:
+            continue
+        completed, terminal, last_response_snippet = read_thread_lifecycle(
+            client, thread_id
         )
-        for thread in visible
-        if thread.get("id")
-    ]
+        raw_threads.append(
+            RawThread(
+                id=str(thread.get("id") or ""),
+                title=app_server_thread_title(thread),
+                nickname=app_server_thread_nickname(thread),
+                role=app_server_thread_role(thread),
+                cwd=str(thread.get("cwd") or ""),
+                updated_at_ms=timestamp_to_ms(thread.get("updatedAt")),
+                parent_id=effective_parent_id(thread),
+                parent_title=parent_titles.get(
+                    parent_thread_id(thread),
+                    app_server_thread_title(thread),
+                ),
+                completed=completed,
+                terminal=terminal,
+                last_response_snippet=last_response_snippet,
+            )
+        )
+    return raw_threads
 
 
 def thread_to_dict(thread, now_ms, active_minutes):
-    state, intensity = classify_thread(thread.updated_at_ms, now_ms, active_minutes)
+    state, intensity = classify_thread(
+        thread.updated_at_ms,
+        now_ms,
+        active_minutes,
+        completed=thread.completed,
+        terminal=thread.terminal,
+    )
     return {
         "id": thread.id,
         "title": thread.title,
@@ -357,6 +439,7 @@ def thread_to_dict(thread, now_ms, active_minutes):
         "age_seconds": age_seconds(thread.updated_at_ms, now_ms),
         "state": state,
         "intensity": intensity,
+        "last_response_snippet": thread.last_response_snippet,
     }
 
 

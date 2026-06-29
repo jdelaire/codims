@@ -48,6 +48,24 @@ def make_thread(
     }
 
 
+def make_read_thread(thread_id, *, status=None, agent_text=""):
+    turn = {
+        "id": f"turn-{thread_id}",
+        "items": [],
+    }
+    if status is not None:
+        turn["status"] = status
+    if agent_text:
+        turn["items"].append(
+            {
+                "type": "agentMessage",
+                "id": f"agent-{thread_id}",
+                "text": agent_text,
+            }
+        )
+    return {"thread": {"id": thread_id, "turns": [turn]}}
+
+
 class FakeAppServerClient:
     def __init__(self, responses=None, error=None):
         self.responses = responses or {}
@@ -64,11 +82,28 @@ class FakeAppServerClient:
 
     def request(self, method, params=None):
         self.calls.append((method, params or {}))
+        if method == "thread/read":
+            read_key = (
+                method,
+                (params or {}).get("threadId"),
+                (params or {}).get("includeTurns"),
+            )
+            if read_key in self.responses:
+                response = self.responses[read_key]
+                if isinstance(response, Exception):
+                    raise response
+                return response
         key = (method, (params or {}).get("cursor"))
         if key in self.responses:
-            return self.responses[key]
+            response = self.responses[key]
+            if isinstance(response, Exception):
+                raise response
+            return response
         if method in self.responses:
-            return self.responses[method]
+            response = self.responses[method]
+            if isinstance(response, Exception):
+                raise response
+            return response
         raise AssertionError(f"unexpected request {method} {params}")
 
 
@@ -234,6 +269,150 @@ class ServerThreadPayloadTests(unittest.TestCase):
         self.assertEqual(
             server.classify_thread(NOW_MS - 61_000, NOW_MS, active_minutes=5),
             ("ACTIVE", "working"),
+        )
+
+    def test_classify_thread_uses_lifecycle_before_timestamp(self):
+        self.assertEqual(
+            server.classify_thread(
+                NOW_MS - 10_000,
+                NOW_MS,
+                active_minutes=5,
+                completed=True,
+                terminal=True,
+            ),
+            ("DONE", "idle"),
+        )
+        self.assertEqual(
+            server.classify_thread(
+                NOW_MS - 10_000,
+                NOW_MS,
+                active_minutes=5,
+                terminal=True,
+            ),
+            ("RECENT", "idle"),
+        )
+        self.assertEqual(
+            server.classify_thread(NOW_MS - 10_000, NOW_MS, active_minutes=5),
+            ("ACTIVE", "energetic"),
+        )
+
+    def test_threads_payload_marks_completed_terminal_and_active_lifecycles(self):
+        fake = FakeAppServerClient(
+            {
+                ("thread/list", None): {
+                    "data": [
+                        make_thread(
+                            "done",
+                            NOW_SECONDS - 10,
+                            name="Done child",
+                            nickname="Ada",
+                        ),
+                        make_thread(
+                            "interrupted",
+                            NOW_SECONDS - 20,
+                            name="Interrupted child",
+                            nickname="Grace",
+                        ),
+                        make_thread(
+                            "active",
+                            NOW_SECONDS - 30,
+                            name="Active child",
+                            nickname="Linus",
+                        ),
+                    ],
+                    "nextCursor": None,
+                },
+                ("thread/read", "parent", False): {
+                    "thread": {"id": "parent", "name": "Parent task"}
+                },
+                ("thread/read", "done", True): make_read_thread(
+                    "done",
+                    status={"type": "completed"},
+                    agent_text="Finished.",
+                ),
+                ("thread/read", "interrupted", True): make_read_thread(
+                    "interrupted",
+                    status={"type": "interrupted"},
+                    agent_text="Stopped.",
+                ),
+                ("thread/read", "active", True): make_read_thread(
+                    "active",
+                    status={"type": "running"},
+                    agent_text="Still working.",
+                ),
+            }
+        )
+
+        payload = server.get_threads_payload(
+            client_factory=lambda: fake,
+            active_minutes=5,
+            max_age_hours=12,
+            now_ms=NOW_MS,
+        )
+
+        by_id = {thread["id"]: thread for thread in payload["threads"]}
+        self.assertEqual(by_id["done"]["state"], "DONE")
+        self.assertEqual(by_id["done"]["intensity"], "idle")
+        self.assertEqual(by_id["interrupted"]["state"], "RECENT")
+        self.assertEqual(by_id["interrupted"]["intensity"], "idle")
+        self.assertEqual(by_id["active"]["state"], "ACTIVE")
+        self.assertEqual(by_id["active"]["intensity"], "energetic")
+        self.assertEqual(payload["counts"]["active"], 1)
+
+    def test_threads_payload_includes_bounded_last_response_snippet(self):
+        long_response = "word\n" * 100
+        fake = FakeAppServerClient(
+            {
+                ("thread/list", None): {
+                    "data": [
+                        make_thread("collapsed", NOW_SECONDS - 60, name="Collapsed"),
+                        make_thread("long", NOW_SECONDS - 60, name="Long"),
+                        make_thread("missing", NOW_SECONDS - 60, name="Missing"),
+                        make_thread("error", NOW_SECONDS - 60, name="Error"),
+                    ],
+                    "nextCursor": None,
+                },
+                ("thread/read", "parent", False): {
+                    "thread": {"id": "parent", "name": "Parent task"}
+                },
+                ("thread/read", "collapsed", True): make_read_thread(
+                    "collapsed",
+                    agent_text="Finished\n\nwith   extra\tspace.",
+                ),
+                ("thread/read", "long", True): make_read_thread(
+                    "long",
+                    agent_text=long_response,
+                ),
+                ("thread/read", "missing", True): make_read_thread("missing"),
+                ("thread/read", "error", True): server.AppServerError("boom"),
+            }
+        )
+
+        payload = server.get_threads_payload(
+            client_factory=lambda: fake,
+            active_minutes=5,
+            max_age_hours=12,
+            now_ms=NOW_MS,
+        )
+
+        by_id = {thread["id"]: thread for thread in payload["threads"]}
+        self.assertEqual(
+            by_id["collapsed"]["last_response_snippet"],
+            "Finished with extra space.",
+        )
+        self.assertLessEqual(
+            len(by_id["long"]["last_response_snippet"]),
+            server.LAST_RESPONSE_SNIPPET_LIMIT,
+        )
+        self.assertTrue(by_id["long"]["last_response_snippet"].endswith("..."))
+        self.assertNotIn("\n", by_id["long"]["last_response_snippet"])
+        self.assertEqual(
+            by_id["missing"]["last_response_snippet"],
+            server.NO_RESPONSE_CAPTURED,
+        )
+        self.assertEqual(
+            by_id["error"]["last_response_snippet"],
+            server.NO_RESPONSE_CAPTURED,
         )
 
     def test_app_server_error_returns_empty_payload_with_error(self):
