@@ -354,6 +354,65 @@ dd {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
+.digest-list {
+  display: grid;
+  gap: 8px;
+}
+
+.digest-empty {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.digest-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid rgba(172, 188, 209, 0.18);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.62);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  padding: 9px 10px;
+  text-align: left;
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.digest-card:hover {
+  border-color: rgba(34, 211, 238, 0.48);
+  background: rgba(20, 31, 49, 0.82);
+  transform: translateY(-1px);
+}
+
+.digest-card:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.45);
+  outline-offset: 2px;
+}
+
+.digest-card-meta {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.digest-card-title {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.digest-card-response {
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .thread-message {
   display: grid;
   gap: 8px;

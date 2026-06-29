@@ -61,6 +61,8 @@ const state = {
   live: true,
   labels: true,
   showInactive: false,
+  selectedMode: null,
+  selectedDigest: null,
   selectedId: null,
   selectedThread: null,
   threads: [],
@@ -891,7 +893,16 @@ async function refreshThreads() {
     reconcileAgents(projectGroups);
     updateCounters(payload, projectGroups);
     updateStatus(payload);
-    if (state.selectedId) {
+    if (state.selectedMode === "digest" && state.selectedDigest?.key) {
+      const selectedDigest = projectGroups
+        .flatMap((projectGroup) => projectGroup.parentGroups)
+        .find((parentGroup) => parentGroup.key === state.selectedDigest.key);
+      if (selectedDigest) {
+        renderDigestDetails(selectedDigest);
+      } else {
+        clearDetails();
+      }
+    } else if (state.selectedId) {
       const selected = projectGroups
         .flatMap((projectGroup) => projectGroup.threads)
         .find((thread) => thread.id === state.selectedId);
@@ -918,6 +929,8 @@ async function refreshThreads() {
 
 function showDetails(thread) {
   const changedSelection = state.selectedId !== thread.id;
+  state.selectedMode = "thread";
+  state.selectedDigest = null;
   state.selectedId = thread.id;
   state.selectedThread = thread;
   if (changedSelection) {
@@ -928,8 +941,20 @@ function showDetails(thread) {
   loadThreadDetail(thread);
 }
 
+function showDigest(parentGroup) {
+  state.selectedMode = "digest";
+  state.selectedDigest = parentGroup;
+  state.selectedId = null;
+  state.selectedThread = null;
+  state.detailSeq += 1;
+  state.sendSeq += 1;
+  dom.threadMessageInput.value = "";
+  dom.threadMessageStatus.textContent = "";
+  renderDigestDetails(parentGroup);
+}
+
 function canSendToThread(thread) {
-  return thread?.role === "thread";
+  return state.selectedMode === "thread" && thread?.role === "thread";
 }
 
 function updateMessageComposer(thread) {
@@ -944,6 +969,8 @@ function updateMessageComposer(thread) {
 }
 
 function renderDetails(thread) {
+  state.selectedMode = "thread";
+  state.selectedDigest = null;
   state.selectedThread = thread;
   updateAgentLabelVisibility();
   dom.detailsEmpty.hidden = true;
@@ -963,8 +990,81 @@ function renderDetails(thread) {
   updateMessageComposer(thread);
 }
 
+function digestDetailThread(item) {
+  const thread = state.threads.find((candidate) => candidate.id === item.id);
+  return thread || {
+    ...item,
+    state: "DONE",
+    intensity: "digest",
+    cwd: "",
+  };
+}
+
+function renderDigestDetails(parentGroup) {
+  state.selectedDigest = parentGroup;
+  updateAgentLabelVisibility();
+  dom.detailsEmpty.hidden = true;
+  dom.detailsContent.hidden = false;
+  dom.detailNickname.textContent = parentGroup.title || "Finished agents";
+  dom.detailState.textContent = "DONE DIGEST";
+  dom.detailRole.textContent = "digest";
+  dom.detailProject.textContent = parentGroup.project || "unknown";
+  dom.detailAge.textContent = parentGroup.latestFinishedAt
+    ? formatAge(Math.max(0, Math.floor((Date.now() - parentGroup.latestFinishedAt) / 1000)))
+    : "(none)";
+  dom.detailTitle.textContent = `${parentGroup.finishedCount || 0} finished agent${
+    parentGroup.finishedCount === 1 ? "" : "s"
+  }`;
+  dom.detailParent.textContent = parentGroup.parentId || "(none)";
+  dom.detailCwd.textContent = parentGroup.latestFinishedAt
+    ? new Date(parentGroup.latestFinishedAt).toLocaleString()
+    : "(none)";
+  dom.detailId.textContent = parentGroup.key;
+
+  const items = (parentGroup.digestItems || []).slice().sort((left, right) => {
+    return (right.updated_at_ms || 0) - (left.updated_at_ms || 0);
+  });
+  const list = document.createElement("div");
+  list.className = "digest-list";
+
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "digest-empty";
+    empty.textContent = "No finished agents captured.";
+    list.appendChild(empty);
+  }
+
+  for (const item of items) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "digest-card";
+    card.addEventListener("click", () => showDetails(digestDetailThread(item)));
+
+    const meta = document.createElement("span");
+    meta.className = "digest-card-meta";
+    meta.textContent = `${item.nickname || "agent"} / ${formatAge(item.age_seconds || 0)}`;
+
+    const title = document.createElement("span");
+    title.className = "digest-card-title";
+    title.textContent = item.title || "(untitled)";
+
+    const response = document.createElement("span");
+    response.className = "digest-card-response";
+    response.textContent = item.last_response_snippet || "No response captured";
+
+    card.replaceChildren(meta, title, response);
+    list.appendChild(card);
+  }
+
+  dom.detailThreadContent.replaceChildren(list);
+  updateMessageComposer(null);
+}
+
 async function loadThreadDetail(thread) {
   if (state.detailCache.has(thread.id)) {
+    if (state.selectedMode !== "thread" || state.selectedId !== thread.id) {
+      return;
+    }
     renderDetails({ ...thread, ...state.detailCache.get(thread.id) });
     return;
   }
@@ -972,7 +1072,7 @@ async function loadThreadDetail(thread) {
   const seq = ++state.detailSeq;
   try {
     const payload = await fetchThreadDetail(thread.id);
-    if (seq !== state.detailSeq || state.selectedId !== thread.id) {
+    if (seq !== state.detailSeq || state.selectedMode !== "thread" || state.selectedId !== thread.id) {
       return;
     }
     if (payload.error) {
@@ -982,7 +1082,7 @@ async function loadThreadDetail(thread) {
     state.detailCache.set(thread.id, detail);
     renderDetails({ ...thread, ...detail });
   } catch (error) {
-    if (seq !== state.detailSeq || state.selectedId !== thread.id) {
+    if (seq !== state.detailSeq || state.selectedMode !== "thread" || state.selectedId !== thread.id) {
       return;
     }
     dom.detailThreadContent.textContent = `Unable to load thread content: ${error.message}`;
@@ -990,6 +1090,8 @@ async function loadThreadDetail(thread) {
 }
 
 function clearDetails() {
+  state.selectedMode = null;
+  state.selectedDigest = null;
   state.selectedId = null;
   state.selectedThread = null;
   updateAgentLabelVisibility();
