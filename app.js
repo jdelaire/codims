@@ -460,6 +460,14 @@ function agentGlowForState(thread) {
   return { color: 0x475569, opacity: 0.18 };
 }
 
+function agentBodyColor(thread, parentColorHex) {
+  return thread.state === "DONE" ? 0xb45309 : parentColorHex;
+}
+
+function agentLabelBorderColor(thread, parentCssColor) {
+  return thread.state === "DONE" ? "rgba(245, 158, 11, 0.58)" : parentCssColor;
+}
+
 function createParentAgent(parentGroup) {
   const group = new THREE.Group();
   group.userData.parentKey = parentGroup.key;
@@ -874,7 +882,7 @@ function reconcileAgents(projectGroups) {
         agent.scale.setScalar(child.layout.scale);
         const parts = agent.userData.parts;
         const glow = agentGlowForState(thread);
-        parts.body.material.color.setHex(parentColorHex);
+        parts.body.material.color.setHex(agentBodyColor(thread, parentColorHex));
         parts.glowMaterial.color.setHex(glow.color);
         parts.glowMaterial.opacity = glow.opacity;
         parts.body.userData.threadId = thread.id;
@@ -892,7 +900,7 @@ function reconcileAgents(projectGroups) {
         label.dataset.threadId = thread.id;
         label.dataset.parentId = thread.parent_id || thread.id;
         label.dataset.roomIndex = String(index);
-        label.style.borderColor = parentCssColor;
+        label.style.borderColor = agentLabelBorderColor(thread, parentCssColor);
         label.style.boxShadow = thread.state === "ACTIVE" ? `0 0 16px ${parentCssColor}66` : "";
 
         const handoffKey = `${parentGroup.key}:${thread.id}`;
