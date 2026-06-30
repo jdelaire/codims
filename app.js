@@ -5,6 +5,7 @@ import {
   childVisualLayout,
   filterVisibleProjectGroups,
   handoffShouldAnimate,
+  matchesThreadSearch,
   parentGroupOffset,
   projectDisplayText,
   projectRoomGridSpacing,
@@ -23,6 +24,7 @@ const dom = {
   controls: document.querySelector("#controls"),
   activeMinutes: document.querySelector("#activeMinutes"),
   maxAgeHours: document.querySelector("#maxAgeHours"),
+  threadSearch: document.querySelector("#threadSearch"),
   liveToggle: document.querySelector("#liveToggle"),
   labelsToggle: document.querySelector("#labelsToggle"),
   inactiveToggle: document.querySelector("#inactiveToggle"),
@@ -66,6 +68,7 @@ const state = {
   live: true,
   labels: true,
   showInactive: false,
+  search: "",
   selectedId: null,
   selectedThread: null,
   threads: [],
@@ -828,12 +831,17 @@ function updateAgentLabelVisibility() {
   }
 }
 
-function updateCounters(payload, projectGroups) {
+function updateCounters(projectGroups) {
   const visibleThreads = projectGroups.reduce(
     (total, projectGroup) => total + projectGroup.threads.length,
     0,
   );
-  dom.activeCount.textContent = String(payload.counts.active);
+  const activeThreads = projectGroups.reduce(
+    (total, projectGroup) =>
+      total + projectGroup.threads.filter((thread) => thread.state === "ACTIVE").length,
+    0,
+  );
+  dom.activeCount.textContent = String(activeThreads);
   dom.visibleCount.textContent = String(visibleThreads);
   dom.projectCount.textContent = String(projectGroups.length);
   dom.emptyState.textContent = state.showInactive
@@ -890,12 +898,13 @@ async function refreshThreads() {
     if (seq !== state.refreshSeq) {
       return;
     }
-    state.threads = payload.threads;
-    const allProjectGroups = buildProjectParentGroups(payload.threads);
+    const visibleThreads = payload.threads.filter((thread) => matchesThreadSearch(thread, state.search));
+    state.threads = visibleThreads;
+    const allProjectGroups = buildProjectParentGroups(visibleThreads);
     const projectGroups = filterVisibleProjectGroups(allProjectGroups, state.showInactive);
     reconcileRooms(projectGroups);
     reconcileAgents(projectGroups);
-    updateCounters(payload, projectGroups);
+    updateCounters(projectGroups);
     updateStatus(payload);
     if (state.selectedId) {
       const selected = projectGroups
@@ -1259,6 +1268,10 @@ function bindEvents() {
   });
   dom.activeMinutes.addEventListener("change", refreshThreads);
   dom.maxAgeHours.addEventListener("change", refreshThreads);
+  dom.threadSearch.addEventListener("input", () => {
+    state.search = dom.threadSearch.value;
+    refreshThreads();
+  });
   dom.liveToggle.addEventListener("click", () => setLive(!state.live));
   dom.labelsToggle.addEventListener("click", () => setLabels(!state.labels));
   dom.inactiveToggle.addEventListener("click", () => setShowInactive(!state.showInactive));
