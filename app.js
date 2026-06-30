@@ -3,6 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import {
   buildProjectParentGroups,
   childVisualLayout,
+  densityScale,
   filterVisibleProjectGroups,
   handoffShouldAnimate,
   matchesThreadSearch,
@@ -724,6 +725,7 @@ function reconcileAgents(projectGroups) {
   );
   const activeIds = new Set(childThreads.map((thread) => thread.id));
   const activeHandoffKeys = new Set();
+  const density = densityScale(state.density);
   state.selectable = [];
   addRoomSelectables();
 
@@ -768,6 +770,7 @@ function reconcileAgents(projectGroups) {
       parentAgent.userData.parentGroup = parentGroup;
       parentAgent.userData.thread = parentGroup.lead;
       parentAgent.position.copy(parentPosition);
+      parentAgent.scale.setScalar(density);
 
       const parentParts = parentAgent.userData.parts;
       const parentColorHex = parentGroupColor(parentGroup);
@@ -806,7 +809,7 @@ function reconcileAgents(projectGroups) {
         agent.userData.room = room;
         agent.userData.labelHeight = 1.72 * child.layout.scale;
         agent.position.copy(worldPosition);
-        agent.scale.setScalar(child.layout.scale);
+        agent.scale.setScalar(child.layout.scale * density);
         const parts = agent.userData.parts;
         parts.body.material.color.setHex(parentColorHex);
         parts.glowMaterial.color.setHex(thread.state === "ACTIVE" ? 0x34d399 : 0x475569);

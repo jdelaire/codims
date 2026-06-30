@@ -4,6 +4,7 @@ import {
   buildProjectParentGroups,
   childHandoffOffset,
   childVisualLayout,
+  densityScale,
   filterVisibleProjectGroups,
   handoffShouldAnimate,
   matchesThreadSearch,
@@ -73,6 +74,9 @@ assert.equal(privacyLabel("Build Codims", false), "Build Codims");
 assert.equal(privacyLabel("Build Codims", true), "Hidden");
 assert.equal(privacyPath("/repo/app", false), "/repo/app");
 assert.equal(privacyPath("/repo/app", true), "Hidden");
+assert.equal(densityScale("normal"), 1);
+assert.equal(densityScale("compact"), 0.78);
+assert.equal(densityScale("bad"), 1);
 assert.deepEqual(normalizePreferences({ activeMinutes: "8", maxAgeHours: "24", labels: false }), {
   activeMinutes: "8",
   maxAgeHours: "24",

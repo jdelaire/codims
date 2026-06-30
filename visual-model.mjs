@@ -128,6 +128,10 @@ export function projectDisplayText(project, count) {
   return `${name.toUpperCase()} (${count})`;
 }
 
+export function densityScale(density) {
+  return density === "compact" ? 0.78 : 1;
+}
+
 export function privacyLabel(value, privacyMode) {
   if (privacyMode) {
     return "Hidden";
