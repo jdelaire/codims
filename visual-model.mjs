@@ -382,18 +382,28 @@ export function sceneObjectIsSelected(selection = {}, object = {}) {
     return false;
   }
   if (object.type === "room") {
-    return selection.mode === "room" && selection.project === object.project;
+    return Boolean(
+      selection.mode === "room" && selection.project && selection.project === object.project,
+    );
   }
   if (object.type === "digest") {
-    return selection.mode === "digest" && selection.digestKey === object.digestKey;
+    return Boolean(
+      selection.mode === "digest" && selection.digestKey && selection.digestKey === object.digestKey,
+    );
   }
   if (object.type === "parent") {
+    if (selection.mode !== "thread") {
+      return false;
+    }
     return Boolean(
       (selection.parentKey && selection.parentKey === object.parentKey) ||
         (selection.threadId && selection.threadId === object.threadId),
     );
   }
   if (object.type === "agent") {
+    if (selection.mode !== "thread") {
+      return false;
+    }
     return Boolean(selection.threadId && selection.threadId === object.threadId);
   }
   return false;

@@ -134,12 +134,20 @@ assert.equal(
   ),
   false,
 );
+assert.equal(sceneObjectIsSelected({ mode: "room" }, { type: "room" }), false);
 assert.equal(
   sceneObjectIsSelected(
     { mode: "thread", threadId: "parent", parentKey: "codims:parent" },
     { type: "parent", threadId: "parent", parentKey: "codims:parent" },
   ),
   true,
+);
+assert.equal(
+  sceneObjectIsSelected(
+    { mode: "digest", threadId: "parent", parentKey: "codims:parent" },
+    { type: "parent", threadId: "parent", parentKey: "codims:parent" },
+  ),
+  false,
 );
 assert.equal(
   sceneObjectIsSelected(
@@ -157,11 +165,19 @@ assert.equal(
 );
 assert.equal(
   sceneObjectIsSelected(
+    { mode: "room", threadId: "child-a" },
+    { type: "agent", threadId: "child-a" },
+  ),
+  false,
+);
+assert.equal(
+  sceneObjectIsSelected(
     { mode: "digest", digestKey: "codims:parent" },
     { type: "digest", digestKey: "codims:parent" },
   ),
   true,
 );
+assert.equal(sceneObjectIsSelected({ mode: "digest" }, { type: "digest" }), false);
 assert.equal(sceneObjectIsSelected(null, { type: "agent", threadId: "child-a" }), false);
 assert.equal(shouldPollThreads(true, false), true);
 assert.equal(shouldPollThreads(true, true), false);
