@@ -128,6 +128,20 @@ export function projectDisplayText(project, count) {
   return `${name.toUpperCase()} (${count})`;
 }
 
+export function privacyLabel(value, privacyMode) {
+  if (privacyMode) {
+    return "Hidden";
+  }
+  return String(value || "");
+}
+
+export function privacyPath(value, privacyMode) {
+  if (privacyMode) {
+    return "Hidden";
+  }
+  return String(value || "");
+}
+
 export function handoffShouldAnimate(parentGroup, thread) {
   return Boolean(parentGroup?.isHandoffActive && thread?.state === "ACTIVE");
 }

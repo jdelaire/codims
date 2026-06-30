@@ -8,6 +8,8 @@ import {
   handoffShouldAnimate,
   matchesThreadSearch,
   parentGroupOffset,
+  privacyLabel,
+  privacyPath,
   projectRoomLayout,
   projectRoomGridSpacing,
   projectDisplayText,
@@ -66,6 +68,10 @@ assert.equal(matchesThreadSearch(threads[1], "ada"), true);
 assert.equal(matchesThreadSearch(threads[1], "codims"), true);
 assert.equal(matchesThreadSearch(threads[1], "missing"), false);
 assert.equal(matchesThreadSearch(threads[1], ""), true);
+assert.equal(privacyLabel("Build Codims", false), "Build Codims");
+assert.equal(privacyLabel("Build Codims", true), "Hidden");
+assert.equal(privacyPath("/repo/app", false), "/repo/app");
+assert.equal(privacyPath("/repo/app", true), "Hidden");
 
 const projectGroups = buildProjectParentGroups(threads);
 assert.equal(projectGroups.length, 1);
