@@ -44,6 +44,9 @@ class AppServerError(Exception):
     pass
 
 
+LIFECYCLE_READ_ERRORS = (AppServerError, OSError, ValueError, TypeError, AttributeError)
+
+
 @dataclass
 class RawThread:
     id: str
@@ -365,26 +368,46 @@ def snippet_text(text, limit=LAST_RESPONSE_SNIPPET_LIMIT):
     return f"{collapsed[: limit - len(suffix)].rstrip()}{suffix}"
 
 
+def fetch_thread_lifecycle(client, thread_id):
+    result = client.request(
+        "thread/read", {"threadId": thread_id, "includeTurns": True}
+    )
+    thread = result.get("thread", {}) if isinstance(result, dict) else {}
+    completed, terminal = latest_turn_lifecycle(thread)
+    _, last_response = extract_thread_prompt_and_response(thread)
+    return completed, terminal, snippet_text(last_response)
+
+
 def read_thread_lifecycle(client, thread_id):
     try:
-        result = client.request(
-            "thread/read", {"threadId": thread_id, "includeTurns": True}
-        )
-        thread = result.get("thread", {}) if isinstance(result, dict) else {}
-        completed, terminal = latest_turn_lifecycle(thread)
-        _, last_response = extract_thread_prompt_and_response(thread)
-    except (AppServerError, OSError, ValueError, TypeError, AttributeError):
+        return fetch_thread_lifecycle(client, thread_id)
+    except LIFECYCLE_READ_ERRORS:
         return False, False, NO_RESPONSE_CAPTURED
-    return completed, terminal, snippet_text(last_response)
 
 
 def cached_thread_lifecycle(client, thread_id, updated_at_ms, lifecycle_cache):
     if lifecycle_cache is None:
         return read_thread_lifecycle(client, thread_id)
-    key = (thread_id, updated_at_ms)
-    if key not in lifecycle_cache:
-        lifecycle_cache[key] = read_thread_lifecycle(client, thread_id)
-    return lifecycle_cache[key]
+    entry = lifecycle_cache.get(thread_id)
+    if entry and entry["updated_at_ms"] == updated_at_ms:
+        return entry["lifecycle"]
+    try:
+        lifecycle = fetch_thread_lifecycle(client, thread_id)
+    except LIFECYCLE_READ_ERRORS:
+        return False, False, NO_RESPONSE_CAPTURED
+    lifecycle_cache[thread_id] = {
+        "updated_at_ms": updated_at_ms,
+        "lifecycle": lifecycle,
+    }
+    return lifecycle
+
+
+def prune_lifecycle_cache(lifecycle_cache, visible_thread_ids):
+    if lifecycle_cache is None:
+        return
+    for thread_id in list(lifecycle_cache):
+        if thread_id not in visible_thread_ids:
+            del lifecycle_cache[thread_id]
 
 
 def load_app_server_threads(client, now_ms, max_age_hours, lifecycle_cache=None):
@@ -394,6 +417,8 @@ def load_app_server_threads(client, now_ms, max_age_hours, lifecycle_cache=None)
         for thread in app_threads
         if within_max_age(timestamp_to_ms(thread.get("updatedAt")), now_ms, max_age_hours)
     ]
+    visible_thread_ids = {str(thread.get("id")) for thread in visible if thread.get("id")}
+    prune_lifecycle_cache(lifecycle_cache, visible_thread_ids)
 
     parent_ids = sorted({parent_thread_id(thread) for thread in visible if parent_thread_id(thread)})
     parent_titles = {parent_id: read_parent_title(client, parent_id) for parent_id in parent_ids}

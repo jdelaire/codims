@@ -261,6 +261,123 @@ class ServerThreadPayloadTests(unittest.TestCase):
             invalidated_payload["threads"][0]["last_response_snippet"],
             "Second response.",
         )
+        self.assertEqual(set(cache), {"explicit-cache-thread"})
+        self.assertEqual(
+            cache["explicit-cache-thread"]["updated_at_ms"],
+            (NOW_SECONDS - 30) * 1000,
+        )
+
+    def test_lifecycle_cache_retries_after_transient_read_error(self):
+        cache = {}
+        failed = FakeAppServerClient(
+            {
+                ("thread/list", None): {
+                    "data": [
+                        make_thread(
+                            "retry-thread",
+                            NOW_SECONDS - 60,
+                            name="Retry child",
+                            source="vscode",
+                        )
+                    ],
+                    "nextCursor": None,
+                },
+                ("thread/read", "retry-thread", True): server.AppServerError(
+                    "temporary"
+                ),
+            }
+        )
+        recovered = FakeAppServerClient(
+            {
+                ("thread/list", None): {
+                    "data": [
+                        make_thread(
+                            "retry-thread",
+                            NOW_SECONDS - 60,
+                            name="Retry child",
+                            source="vscode",
+                        )
+                    ],
+                    "nextCursor": None,
+                },
+                ("thread/read", "retry-thread", True): make_read_thread(
+                    "retry-thread",
+                    status={"type": "completed"},
+                    agent_text="Recovered response.",
+                ),
+            }
+        )
+
+        failed_payload = self.get_threads_payload_with_cache(failed, cache)
+        recovered_payload = self.get_threads_payload_with_cache(recovered, cache)
+
+        self.assertEqual(self.thread_read_call_count(failed, True), 1)
+        self.assertEqual(self.thread_read_call_count(recovered, True), 1)
+        self.assertEqual(
+            failed_payload["threads"][0]["last_response_snippet"],
+            server.NO_RESPONSE_CAPTURED,
+        )
+        self.assertEqual(recovered_payload["threads"][0]["state"], "DONE")
+        self.assertEqual(
+            recovered_payload["threads"][0]["last_response_snippet"],
+            "Recovered response.",
+        )
+
+    def test_lifecycle_cache_prunes_threads_not_visible_in_current_payload(self):
+        cache = {}
+        first = FakeAppServerClient(
+            {
+                ("thread/list", None): {
+                    "data": [
+                        make_thread(
+                            "kept-thread",
+                            NOW_SECONDS - 60,
+                            name="Kept child",
+                            source="vscode",
+                        ),
+                        make_thread(
+                            "gone-thread",
+                            NOW_SECONDS - 60,
+                            name="Gone child",
+                            source="vscode",
+                        ),
+                    ],
+                    "nextCursor": None,
+                },
+                ("thread/read", "kept-thread", True): make_read_thread(
+                    "kept-thread",
+                    agent_text="Kept response.",
+                ),
+                ("thread/read", "gone-thread", True): make_read_thread(
+                    "gone-thread",
+                    agent_text="Gone response.",
+                ),
+            }
+        )
+        second = FakeAppServerClient(
+            {
+                ("thread/list", None): {
+                    "data": [
+                        make_thread(
+                            "kept-thread",
+                            NOW_SECONDS - 60,
+                            name="Kept child",
+                            source="vscode",
+                        )
+                    ],
+                    "nextCursor": None,
+                },
+                ("thread/read", "kept-thread", True): make_read_thread(
+                    "kept-thread",
+                    agent_text="Kept response.",
+                ),
+            }
+        )
+
+        self.get_threads_payload_with_cache(first, cache)
+        self.get_threads_payload_with_cache(second, cache)
+
+        self.assertEqual(set(cache), {"kept-thread"})
 
     def test_payload_reads_app_server_subagents_and_shapes_json(self):
         fake = FakeAppServerClient(
