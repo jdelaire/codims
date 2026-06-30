@@ -410,7 +410,9 @@ h1::before {
 .review-lane-actions {
   display: flex;
   flex: none;
+  flex-wrap: wrap;
   gap: 6px;
+  justify-content: flex-end;
 }
 
 .review-lane h2 {
@@ -427,6 +429,7 @@ h1::before {
 
 #reviewUnreviewedToggle,
 #reviewPanelToggle,
+#reviewStaleToggle,
 .action-inbox-filters button,
 .review-toggle,
 .review-item-main {
@@ -445,7 +448,8 @@ h1::before {
   font-size: 12px;
 }
 
-#reviewPanelToggle {
+#reviewPanelToggle,
+#reviewStaleToggle {
   flex: none;
   padding: 6px 8px;
   color: #cffafe;
@@ -458,7 +462,8 @@ h1::before {
   background: rgba(34, 211, 238, 0.12);
 }
 
-#reviewPanelToggle[aria-pressed="true"] {
+#reviewPanelToggle[aria-pressed="true"],
+#reviewStaleToggle[aria-pressed="true"] {
   border-color: rgba(34, 211, 238, 0.62);
   background: rgba(34, 211, 238, 0.12);
 }
@@ -538,6 +543,7 @@ h1::before {
 .action-inbox-filters button:hover,
 .review-toggle:hover,
 #reviewPanelToggle:hover,
+#reviewStaleToggle:hover,
 #reviewUnreviewedToggle:hover {
   border-color: rgba(34, 211, 238, 0.48);
 }
@@ -546,6 +552,7 @@ h1::before {
 .action-inbox-filters button:focus-visible,
 .review-toggle:focus-visible,
 #reviewPanelToggle:focus-visible,
+#reviewStaleToggle:focus-visible,
 #reviewUnreviewedToggle:focus-visible {
   outline: 2px solid rgba(34, 211, 238, 0.45);
   outline-offset: 2px;

@@ -136,6 +136,7 @@ assert.deepEqual(normalizePreferences({ activeMinutes: "8", maxAgeHours: "24", l
   privacy: false,
   density: "normal",
   reviewPanelExpanded: false,
+  showStale: true,
 });
 assert.deepEqual(normalizePreferences({ activeMinutes: "", maxAgeHours: "-1", density: "bad" }), {
   maxAgeHours: "8",
@@ -144,9 +145,12 @@ assert.deepEqual(normalizePreferences({ activeMinutes: "", maxAgeHours: "-1", de
   privacy: false,
   density: "normal",
   reviewPanelExpanded: false,
+  showStale: true,
 });
 assert.equal(normalizePreferences({ reviewPanelExpanded: false }).reviewPanelExpanded, false);
 assert.equal(normalizePreferences({ reviewPanelExpanded: true }).reviewPanelExpanded, true);
+assert.equal(normalizePreferences({ showStale: false }).showStale, false);
+assert.equal(normalizePreferences({ showStale: true }).showStale, true);
 assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: "" }).maxAgeHours, "8");
 assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: "   " }).maxAgeHours, "8");
 assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: null }).maxAgeHours, "8");
@@ -407,6 +411,24 @@ assert.deepEqual(
     (item) => `${item.type}:${item.id || item.parentId}`,
   ),
   ["running:parent", "stale:solo"],
+);
+assert.deepEqual(
+  filterActionInboxItems(actionInbox, { showStale: false }).map(
+    (item) => `${item.type}:${item.id || item.parentId}`,
+  ),
+  [
+    "needs_review:child-d",
+    "needs_review:parent",
+    "running:parent",
+    "reviewed:child-c",
+    "reviewed:solo",
+  ],
+);
+assert.deepEqual(
+  filterActionInboxItems(actionInbox, { filter: "stale", showStale: false }).map(
+    (item) => `${item.type}:${item.id || item.parentId}`,
+  ),
+  ["running:parent"],
 );
 assert.deepEqual(
   actionInbox.items.map((item) => actionInboxItemParentKey(item)),

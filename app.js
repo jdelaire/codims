@@ -51,6 +51,7 @@ const dom = {
   detailsPanel: document.querySelector(".details-panel"),
   reviewLane: document.querySelector(".review-lane"),
   reviewPanelToggle: document.querySelector("#reviewPanelToggle"),
+  reviewStaleToggle: document.querySelector("#reviewStaleToggle"),
   reviewCount: document.querySelector("#reviewCount"),
   reviewUnreviewedToggle: document.querySelector("#reviewUnreviewedToggle"),
   actionInboxButtons: [...document.querySelectorAll("[data-action-inbox-filter]")],
@@ -134,6 +135,7 @@ const state = {
   search: "",
   unreviewedOnly: false,
   reviewPanelExpanded: false,
+  showStale: true,
   actionInboxFilter: null,
   actionInbox: buildActionInbox([]),
   reviewedThreadIds: loadReviewedThreadIds(),
@@ -176,6 +178,7 @@ function savePreferences() {
         privacy: state.privacy,
         density: state.density,
         reviewPanelExpanded: state.reviewPanelExpanded,
+        showStale: state.showStale,
       }),
     );
   } catch {
@@ -1116,6 +1119,7 @@ function visibleActionInboxItems(inbox) {
   return filterActionInboxItems(inbox, {
     unreviewedOnly: state.unreviewedOnly,
     filter: state.actionInboxFilter,
+    showStale: state.showStale,
   });
 }
 
@@ -1174,6 +1178,8 @@ function renderReviewLane() {
   dom.reviewCount.textContent = `${counts.needs_review || 0} needs review / ${
     counts.running || 0
   } running / ${counts.stale || 0} stale / ${counts.reviewed || 0} reviewed`;
+  dom.reviewStaleToggle.textContent = state.showStale ? "Hide stale" : "Show stale";
+  dom.reviewStaleToggle.setAttribute("aria-pressed", String(state.showStale));
   dom.reviewUnreviewedToggle.setAttribute("aria-pressed", String(state.unreviewedOnly));
   for (const button of dom.actionInboxButtons) {
     const type = button.dataset.actionInboxFilter;
@@ -1991,6 +1997,18 @@ function setReviewPanelExpanded(nextExpanded, { persist = true } = {}) {
   resize();
 }
 
+function setShowStale(nextShowStale, { persist = true, render = true } = {}) {
+  state.showStale = nextShowStale;
+  dom.reviewStaleToggle.textContent = nextShowStale ? "Hide stale" : "Show stale";
+  dom.reviewStaleToggle.setAttribute("aria-pressed", String(nextShowStale));
+  if (persist) {
+    savePreferences();
+  }
+  if (render) {
+    renderReviewLane();
+  }
+}
+
 async function onThreadMessageSubmit(event) {
   event.preventDefault();
   showSendConfirmation();
@@ -2108,6 +2126,7 @@ function bindEvents() {
   dom.privacyToggle.addEventListener("click", () => setPrivacy(!state.privacy));
   dom.inactiveToggle.addEventListener("click", () => setShowInactive(!state.showInactive));
   dom.reviewPanelToggle.addEventListener("click", () => setReviewPanelExpanded(!state.reviewPanelExpanded));
+  dom.reviewStaleToggle.addEventListener("click", () => setShowStale(!state.showStale));
   dom.reviewUnreviewedToggle.addEventListener("click", () => {
     state.unreviewedOnly = !state.unreviewedOnly;
     if (state.unreviewedOnly) {
@@ -2144,6 +2163,7 @@ dom.maxAgeHours.value = prefs.maxAgeHours;
 state.density = prefs.density;
 dom.densityMode.value = prefs.density;
 setReviewPanelExpanded(prefs.reviewPanelExpanded, { persist: false });
+setShowStale(prefs.showStale, { persist: false, render: false });
 setLabels(prefs.labels);
 setShowInactive(prefs.showInactive, { refresh: false });
 setPrivacy(prefs.privacy, { refresh: false });

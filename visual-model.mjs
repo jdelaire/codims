@@ -164,13 +164,18 @@ export function buildActionInbox(projectGroups, reviewedThreadIds = new Set(), o
 
 export function filterActionInboxItems(inbox, options = {}) {
   const items = inbox?.items || [];
+  const allowsStale = (item) => options.showStale !== false || item.type !== "stale";
   if (options.unreviewedOnly) {
-    return items.filter((item) => item.type === "needs_review" || item.type === "running");
+    return items.filter(
+      (item) => allowsStale(item) && (item.type === "needs_review" || item.type === "running"),
+    );
   }
   if (options.filter) {
-    return items.filter((item) => item.type === options.filter || item.type === "running");
+    return items.filter(
+      (item) => allowsStale(item) && (item.type === options.filter || item.type === "running"),
+    );
   }
-  return items;
+  return items.filter(allowsStale);
 }
 
 export function actionInboxItemParentKey(item) {
@@ -388,6 +393,7 @@ export function normalizePreferences(raw = {}) {
     privacy: Boolean(raw.privacy),
     density: raw.density === "compact" ? "compact" : "normal",
     reviewPanelExpanded: Boolean(raw.reviewPanelExpanded),
+    showStale: raw.showStale === undefined ? true : Boolean(raw.showStale),
   };
 }
 
