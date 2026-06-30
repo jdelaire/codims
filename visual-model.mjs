@@ -173,6 +173,10 @@ export function filterActionInboxItems(inbox, options = {}) {
   return items;
 }
 
+export function actionInboxItemParentKey(item) {
+  return item?.parentKey || null;
+}
+
 export function staleInboxCutoffMs(nowMs = Date.now()) {
   return nowMs - STALE_AFTER_MS;
 }

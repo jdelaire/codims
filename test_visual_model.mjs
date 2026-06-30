@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   buildActionInbox,
+  actionInboxItemParentKey,
   buildParentTimeline,
   buildProjectParentGroups,
   buildReviewItems,
@@ -406,6 +407,17 @@ assert.deepEqual(
     (item) => `${item.type}:${item.id || item.parentId}`,
   ),
   ["running:parent", "stale:solo"],
+);
+assert.deepEqual(
+  actionInbox.items.map((item) => actionInboxItemParentKey(item)),
+  [
+    "codims:parent",
+    "codims:parent",
+    "codims:parent",
+    "codims:solo",
+    "codims:parent",
+    "codims:solo",
+  ],
 );
 assert.deepEqual(
   buildActionInbox(projectGroups, reviewedThreadIds, { staleBeforeMs: 500 }).items.filter(

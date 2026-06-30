@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import {
   actionInboxFetchMaxAgeHours,
+  actionInboxItemParentKey,
   buildActionInbox,
   buildParentTimeline,
   buildProjectParentGroups,
@@ -1305,9 +1306,19 @@ function showParentDetails(parentGroup) {
   showDetails(parentGroup.lead, parentGroup);
 }
 
+function focusParentGroupRoom(parentGroup) {
+  const room = state.rooms.get(parentGroup?.project);
+  if (room) {
+    focusCameraOnRoom(room);
+  }
+}
+
 function openActionInboxItem(item) {
+  const parentGroup = findParentGroupByKey(actionInboxItemParentKey(item));
+  if (parentGroup) {
+    focusParentGroupRoom(parentGroup);
+  }
   if (item.type === "running" || item.type === "stale") {
-    const parentGroup = findParentGroupByKey(item.parentKey);
     if (parentGroup) {
       showParentDetails(parentGroup);
     }
