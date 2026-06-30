@@ -37,6 +37,7 @@ TERMINAL_TURN_STATUSES = {
 }
 LAST_RESPONSE_SNIPPET_LIMIT = 280
 NO_RESPONSE_CAPTURED = "No response captured"
+THREAD_LIFECYCLE_CACHE = {}
 
 
 class AppServerError(Exception):
@@ -377,7 +378,16 @@ def read_thread_lifecycle(client, thread_id):
     return completed, terminal, snippet_text(last_response)
 
 
-def load_app_server_threads(client, now_ms, max_age_hours):
+def cached_thread_lifecycle(client, thread_id, updated_at_ms, lifecycle_cache):
+    if lifecycle_cache is None:
+        return read_thread_lifecycle(client, thread_id)
+    key = (thread_id, updated_at_ms)
+    if key not in lifecycle_cache:
+        lifecycle_cache[key] = read_thread_lifecycle(client, thread_id)
+    return lifecycle_cache[key]
+
+
+def load_app_server_threads(client, now_ms, max_age_hours, lifecycle_cache=None):
     app_threads = fetch_app_server_pages(client, now_ms, max_age_hours)
     visible = [
         thread
@@ -393,8 +403,9 @@ def load_app_server_threads(client, now_ms, max_age_hours):
         thread_id = str(thread.get("id") or "")
         if not thread_id:
             continue
-        completed, terminal, last_response_snippet = read_thread_lifecycle(
-            client, thread_id
+        updated_at_ms = timestamp_to_ms(thread.get("updatedAt"))
+        completed, terminal, last_response_snippet = cached_thread_lifecycle(
+            client, thread_id, updated_at_ms, lifecycle_cache
         )
         raw_threads.append(
             RawThread(
@@ -403,7 +414,7 @@ def load_app_server_threads(client, now_ms, max_age_hours):
                 nickname=app_server_thread_nickname(thread),
                 role=app_server_thread_role(thread),
                 cwd=str(thread.get("cwd") or ""),
-                updated_at_ms=timestamp_to_ms(thread.get("updatedAt")),
+                updated_at_ms=updated_at_ms,
                 parent_id=effective_parent_id(thread),
                 parent_title=parent_titles.get(
                     parent_thread_id(thread),
@@ -681,15 +692,23 @@ def get_threads_payload(
     active_minutes=DEFAULT_ACTIVE_MINUTES,
     max_age_hours=DEFAULT_MAX_AGE_HOURS,
     now_ms=None,
+    lifecycle_cache=None,
 ):
     if now_ms is None:
         now_ms = int(time.time() * 1000)
     if client_factory is None:
         client_factory = default_client_factory()
+    if lifecycle_cache is None:
+        lifecycle_cache = THREAD_LIFECYCLE_CACHE
 
     try:
         with client_factory() as client:
-            threads = load_app_server_threads(client, now_ms, max_age_hours)
+            threads = load_app_server_threads(
+                client,
+                now_ms,
+                max_age_hours,
+                lifecycle_cache=lifecycle_cache,
+            )
     except (AppServerError, OSError, ValueError) as error:
         return empty_payload(now_ms, error)
 

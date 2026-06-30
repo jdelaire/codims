@@ -109,6 +109,18 @@ class FakeAppServerClient:
 
 
 class ServerThreadPayloadTests(unittest.TestCase):
+    def clear_lifecycle_cache(self):
+        cache = getattr(server, "THREAD_LIFECYCLE_CACHE", None)
+        if cache is not None:
+            cache.clear()
+
+    def thread_read_call_count(self, fake, include_turns):
+        return sum(
+            1
+            for method, params in fake.calls
+            if method == "thread/read" and params.get("includeTurns") is include_turns
+        )
+
     def test_payload_includes_capabilities(self):
         fake = FakeAppServerClient(
             {
@@ -121,6 +133,133 @@ class ServerThreadPayloadTests(unittest.TestCase):
         self.assertEqual(
             payload["capabilities"],
             {"read_threads": True, "send_messages": False},
+        )
+
+    def test_default_payload_cache_reuses_lifecycle_reads_only(self):
+        self.clear_lifecycle_cache()
+        fake = FakeAppServerClient(
+            {
+                ("thread/list", None): {
+                    "data": [
+                        make_thread(
+                            "default-cache-thread",
+                            NOW_SECONDS - 60,
+                            name="Cached child",
+                            nickname="Ada",
+                        )
+                    ],
+                    "nextCursor": None,
+                },
+                ("thread/read", "parent", False): {
+                    "thread": {"id": "parent", "name": "Parent task"}
+                },
+                ("thread/read", "default-cache-thread", True): make_read_thread(
+                    "default-cache-thread",
+                    status={"type": "completed"},
+                    agent_text="Cached response.",
+                ),
+            }
+        )
+
+        try:
+            server.get_threads_payload(
+                client_factory=lambda: fake,
+                active_minutes=5,
+                max_age_hours=12,
+                now_ms=NOW_MS,
+            )
+            payload = server.get_threads_payload(
+                client_factory=lambda: fake,
+                active_minutes=5,
+                max_age_hours=12,
+                now_ms=NOW_MS,
+            )
+        finally:
+            self.clear_lifecycle_cache()
+
+        self.assertEqual(
+            self.thread_read_call_count(fake, True),
+            1,
+            "unchanged thread id and updatedAt should reuse lifecycle cache",
+        )
+        self.assertEqual(
+            self.thread_read_call_count(fake, False),
+            2,
+            "parent title reads should not use lifecycle cache",
+        )
+        self.assertEqual(payload["threads"][0]["state"], "DONE")
+        self.assertEqual(
+            payload["threads"][0]["last_response_snippet"],
+            "Cached response.",
+        )
+
+    def get_threads_payload_with_cache(self, fake, cache, now_ms=NOW_MS):
+        try:
+            return server.get_threads_payload(
+                client_factory=lambda: fake,
+                active_minutes=5,
+                max_age_hours=12,
+                now_ms=now_ms,
+                lifecycle_cache=cache,
+            )
+        except TypeError as error:
+            self.fail(f"get_threads_payload should accept lifecycle_cache: {error}")
+
+    def test_injected_lifecycle_cache_reuses_and_invalidates_by_updated_at(self):
+        cache = {}
+        first = FakeAppServerClient(
+            {
+                ("thread/list", None): {
+                    "data": [
+                        make_thread(
+                            "explicit-cache-thread",
+                            NOW_SECONDS - 60,
+                            name="Cached child",
+                            source="vscode",
+                        )
+                    ],
+                    "nextCursor": None,
+                },
+                ("thread/read", "explicit-cache-thread", True): make_read_thread(
+                    "explicit-cache-thread",
+                    status={"type": "completed"},
+                    agent_text="First response.",
+                ),
+            }
+        )
+        second = FakeAppServerClient(
+            {
+                ("thread/list", None): {
+                    "data": [
+                        make_thread(
+                            "explicit-cache-thread",
+                            NOW_SECONDS - 30,
+                            name="Cached child",
+                            source="vscode",
+                        )
+                    ],
+                    "nextCursor": None,
+                },
+                ("thread/read", "explicit-cache-thread", True): make_read_thread(
+                    "explicit-cache-thread",
+                    status={"type": "running"},
+                    agent_text="Second response.",
+                ),
+            }
+        )
+
+        first_payload = self.get_threads_payload_with_cache(first, cache)
+        repeated_payload = self.get_threads_payload_with_cache(first, cache)
+        invalidated_payload = self.get_threads_payload_with_cache(second, cache)
+
+        self.assertEqual(self.thread_read_call_count(first, True), 1)
+        self.assertEqual(self.thread_read_call_count(second, True), 1)
+        self.assertEqual(first_payload["threads"][0]["state"], "DONE")
+        self.assertEqual(repeated_payload["threads"][0]["state"], "DONE")
+        self.assertEqual(invalidated_payload["threads"][0]["state"], "ACTIVE")
+        self.assertEqual(
+            invalidated_payload["threads"][0]["last_response_snippet"],
+            "Second response.",
         )
 
     def test_payload_reads_app_server_subagents_and_shapes_json(self):
