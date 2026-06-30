@@ -132,6 +132,26 @@ export function handoffShouldAnimate(parentGroup, thread) {
   return Boolean(parentGroup?.isHandoffActive && thread?.state === "ACTIVE");
 }
 
+export function matchesThreadSearch(thread, query) {
+  const normalized = String(query || "").trim().toLowerCase();
+  if (!normalized) {
+    return true;
+  }
+  const haystack = [
+    thread?.title,
+    thread?.nickname,
+    thread?.role,
+    thread?.project,
+    thread?.parent_title,
+    thread?.cwd,
+    thread?.id,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(normalized);
+}
+
 export function roomCameraFocus(roomPosition, roomSize, currentCameraPosition, currentTarget) {
   const target = {
     x: Number(roomPosition?.x || 0),

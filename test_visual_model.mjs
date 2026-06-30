@@ -6,6 +6,7 @@ import {
   childVisualLayout,
   filterVisibleProjectGroups,
   handoffShouldAnimate,
+  matchesThreadSearch,
   parentGroupOffset,
   projectRoomLayout,
   projectRoomGridSpacing,
@@ -59,6 +60,12 @@ const threads = [
     updated_at_ms: 1000,
   },
 ];
+
+assert.equal(matchesThreadSearch(threads[0], "ship"), true);
+assert.equal(matchesThreadSearch(threads[1], "ada"), true);
+assert.equal(matchesThreadSearch(threads[1], "codims"), true);
+assert.equal(matchesThreadSearch(threads[1], "missing"), false);
+assert.equal(matchesThreadSearch(threads[1], ""), true);
 
 const projectGroups = buildProjectParentGroups(threads);
 assert.equal(projectGroups.length, 1);
