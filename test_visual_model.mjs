@@ -33,6 +33,7 @@ import {
   STALE_INBOX_FETCH_HOURS,
   staleInboxCutoffMs,
   threadActivityLabel,
+  sceneObjectIsSelected,
 } from "./visual-model.mjs";
 
 const threads = [
@@ -119,6 +120,49 @@ assert.equal(matchesThreadSearch(threads[1], ""), true);
 assert.equal(threadActivityLabel({ state: "ACTIVE" }), "RUNNING");
 assert.equal(threadActivityLabel({ state: "DONE" }), "DONE");
 assert.equal(threadActivityLabel({ state: "RECENT" }), "IDLE");
+assert.equal(
+  sceneObjectIsSelected(
+    { mode: "room", project: "codims" },
+    { type: "room", project: "codims" },
+  ),
+  true,
+);
+assert.equal(
+  sceneObjectIsSelected(
+    { mode: "room", project: "codims" },
+    { type: "room", project: "other" },
+  ),
+  false,
+);
+assert.equal(
+  sceneObjectIsSelected(
+    { mode: "thread", threadId: "parent", parentKey: "codims:parent" },
+    { type: "parent", threadId: "parent", parentKey: "codims:parent" },
+  ),
+  true,
+);
+assert.equal(
+  sceneObjectIsSelected(
+    { mode: "thread", threadId: "child-a", parentKey: null },
+    { type: "agent", threadId: "child-a" },
+  ),
+  true,
+);
+assert.equal(
+  sceneObjectIsSelected(
+    { mode: "thread", threadId: "child-a", parentKey: null },
+    { type: "agent", threadId: "child-b" },
+  ),
+  false,
+);
+assert.equal(
+  sceneObjectIsSelected(
+    { mode: "digest", digestKey: "codims:parent" },
+    { type: "digest", digestKey: "codims:parent" },
+  ),
+  true,
+);
+assert.equal(sceneObjectIsSelected(null, { type: "agent", threadId: "child-a" }), false);
 assert.equal(shouldPollThreads(true, false), true);
 assert.equal(shouldPollThreads(true, true), false);
 assert.equal(shouldPollThreads(false, false), false);
