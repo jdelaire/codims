@@ -133,6 +133,7 @@ assert.deepEqual(normalizePreferences({ activeMinutes: "8", maxAgeHours: "24", l
   showInactive: false,
   privacy: false,
   density: "normal",
+  reviewPanelExpanded: false,
 });
 assert.deepEqual(normalizePreferences({ activeMinutes: "", maxAgeHours: "-1", density: "bad" }), {
   maxAgeHours: "8",
@@ -140,7 +141,10 @@ assert.deepEqual(normalizePreferences({ activeMinutes: "", maxAgeHours: "-1", de
   showInactive: false,
   privacy: false,
   density: "normal",
+  reviewPanelExpanded: false,
 });
+assert.equal(normalizePreferences({ reviewPanelExpanded: false }).reviewPanelExpanded, false);
+assert.equal(normalizePreferences({ reviewPanelExpanded: true }).reviewPanelExpanded, true);
 assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: "" }).maxAgeHours, "8");
 assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: "   " }).maxAgeHours, "8");
 assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: null }).maxAgeHours, "8");

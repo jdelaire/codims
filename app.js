@@ -29,6 +29,7 @@ import {
 } from "./visual-model.mjs";
 
 const dom = {
+  appLayout: document.querySelector(".app-layout"),
   scene: document.querySelector("#scene"),
   labels: document.querySelector("#labels"),
   emptyState: document.querySelector("#emptyState"),
@@ -45,6 +46,9 @@ const dom = {
   labelsToggle: document.querySelector("#labelsToggle"),
   privacyToggle: document.querySelector("#privacyToggle"),
   inactiveToggle: document.querySelector("#inactiveToggle"),
+  detailsPanel: document.querySelector(".details-panel"),
+  reviewLane: document.querySelector(".review-lane"),
+  reviewPanelToggle: document.querySelector("#reviewPanelToggle"),
   reviewCount: document.querySelector("#reviewCount"),
   reviewUnreviewedToggle: document.querySelector("#reviewUnreviewedToggle"),
   actionInboxButtons: [...document.querySelectorAll("[data-action-inbox-filter]")],
@@ -127,6 +131,7 @@ const state = {
   density: "normal",
   search: "",
   unreviewedOnly: false,
+  reviewPanelExpanded: false,
   actionInboxFilter: null,
   actionInbox: buildActionInbox([]),
   reviewedThreadIds: loadReviewedThreadIds(),
@@ -168,6 +173,7 @@ function savePreferences() {
         showInactive: state.showInactive,
         privacy: state.privacy,
         density: state.density,
+        reviewPanelExpanded: state.reviewPanelExpanded,
       }),
     );
   } catch {
@@ -1960,6 +1966,19 @@ function setShowInactive(nextShowInactive, { refresh = true } = {}) {
   }
 }
 
+function setReviewPanelExpanded(nextExpanded, { persist = true } = {}) {
+  state.reviewPanelExpanded = nextExpanded;
+  dom.reviewPanelToggle.textContent = nextExpanded ? "Compact" : "Expand";
+  dom.reviewPanelToggle.setAttribute("aria-pressed", String(nextExpanded));
+  dom.reviewLane.classList.toggle("is-expanded", nextExpanded);
+  dom.detailsPanel.classList.toggle("is-review-expanded", nextExpanded);
+  dom.appLayout.classList.toggle("is-review-expanded", nextExpanded);
+  if (persist) {
+    savePreferences();
+  }
+  resize();
+}
+
 async function onThreadMessageSubmit(event) {
   event.preventDefault();
   showSendConfirmation();
@@ -2076,6 +2095,7 @@ function bindEvents() {
   dom.labelsToggle.addEventListener("click", () => setLabels(!state.labels));
   dom.privacyToggle.addEventListener("click", () => setPrivacy(!state.privacy));
   dom.inactiveToggle.addEventListener("click", () => setShowInactive(!state.showInactive));
+  dom.reviewPanelToggle.addEventListener("click", () => setReviewPanelExpanded(!state.reviewPanelExpanded));
   dom.reviewUnreviewedToggle.addEventListener("click", () => {
     state.unreviewedOnly = !state.unreviewedOnly;
     if (state.unreviewedOnly) {
@@ -2111,6 +2131,7 @@ const prefs = loadPreferences();
 dom.maxAgeHours.value = prefs.maxAgeHours;
 state.density = prefs.density;
 dom.densityMode.value = prefs.density;
+setReviewPanelExpanded(prefs.reviewPanelExpanded, { persist: false });
 setLabels(prefs.labels);
 setShowInactive(prefs.showInactive, { refresh: false });
 setPrivacy(prefs.privacy, { refresh: false });

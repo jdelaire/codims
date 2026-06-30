@@ -372,6 +372,7 @@ export function normalizePreferences(raw = {}) {
     showInactive: Boolean(raw.showInactive),
     privacy: Boolean(raw.privacy),
     density: raw.density === "compact" ? "compact" : "normal",
+    reviewPanelExpanded: Boolean(raw.reviewPanelExpanded),
   };
 }
 

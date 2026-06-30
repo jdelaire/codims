@@ -225,6 +225,10 @@ h1::before {
   min-height: 0;
 }
 
+.app-layout.is-review-expanded {
+  grid-template-columns: minmax(0, 1fr) minmax(520px, 44vw);
+}
+
 .scene-shell {
   position: relative;
   overflow: hidden;
@@ -403,6 +407,12 @@ h1::before {
   gap: 10px;
 }
 
+.review-lane-actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
 .review-lane h2 {
   font-size: 15px;
   line-height: 1.1;
@@ -416,6 +426,7 @@ h1::before {
 }
 
 #reviewUnreviewedToggle,
+#reviewPanelToggle,
 .action-inbox-filters button,
 .review-toggle,
 .review-item-main {
@@ -434,8 +445,20 @@ h1::before {
   font-size: 12px;
 }
 
+#reviewPanelToggle {
+  flex: none;
+  padding: 6px 8px;
+  color: #cffafe;
+  font-size: 12px;
+}
+
 #reviewUnreviewedToggle[aria-pressed="true"] {
   color: #cffafe;
+  border-color: rgba(34, 211, 238, 0.62);
+  background: rgba(34, 211, 238, 0.12);
+}
+
+#reviewPanelToggle[aria-pressed="true"] {
   border-color: rgba(34, 211, 238, 0.62);
   background: rgba(34, 211, 238, 0.12);
 }
@@ -484,6 +507,12 @@ h1::before {
   gap: 7px;
 }
 
+.review-lane.is-expanded .review-list {
+  max-height: min(64vh, 720px);
+  overflow: auto;
+  padding-right: 3px;
+}
+
 .review-empty {
   color: var(--muted);
   font-size: 13px;
@@ -508,6 +537,7 @@ h1::before {
 .review-item-main:hover,
 .action-inbox-filters button:hover,
 .review-toggle:hover,
+#reviewPanelToggle:hover,
 #reviewUnreviewedToggle:hover {
   border-color: rgba(34, 211, 238, 0.48);
 }
@@ -515,6 +545,7 @@ h1::before {
 .review-item-main:focus-visible,
 .action-inbox-filters button:focus-visible,
 .review-toggle:focus-visible,
+#reviewPanelToggle:focus-visible,
 #reviewUnreviewedToggle:focus-visible {
   outline: 2px solid rgba(34, 211, 238, 0.45);
   outline-offset: 2px;
@@ -920,6 +951,10 @@ dd {
     grid-template-rows: minmax(260px, 52vh) minmax(220px, auto);
   }
 
+  .app-layout.is-review-expanded {
+    grid-template-columns: 1fr;
+  }
+
   .scene-shell {
     min-height: 260px;
   }
@@ -928,6 +963,10 @@ dd {
     max-height: 320px;
     border-left: 0;
     border-top: 1px solid var(--line);
+  }
+
+  .details-panel.is-review-expanded {
+    max-height: 72vh;
   }
 }
 
