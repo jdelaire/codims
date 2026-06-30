@@ -263,16 +263,17 @@ h1::before {
   transform: translate(-50%, -100%);
   max-width: 140px;
   padding: 5px 8px;
-  border: 1px solid rgba(172, 188, 209, 0.28);
+  border: 1px solid rgba(172, 188, 209, 0.24);
   border-radius: 5px;
-  background: rgba(6, 9, 16, 0.76);
+  background: rgba(6, 9, 16, 0.66);
   color: var(--text);
   font-size: 12px;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  opacity: 0.84;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.26), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
   backdrop-filter: blur(10px);
 }
 
@@ -295,8 +296,8 @@ h1::before {
   padding: 9px 12px;
   color: #cbd5e1;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(8, 13, 24, 0.92));
-  border-color: rgba(34, 211, 238, 0.58);
-  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.12) inset, 0 0 24px rgba(34, 211, 238, 0.16);
+  border-color: rgba(125, 211, 252, 0.44);
+  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.08) inset, 0 0 16px rgba(125, 211, 252, 0.1);
   font-size: 18px;
   font-weight: 760;
   line-height: 1.08;
@@ -362,6 +363,21 @@ h1::before {
   background: rgba(15, 23, 42, 0.72);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.26);
   opacity: 0.72;
+}
+
+.agent-label.is-selected,
+.digest-label.is-selected,
+.parent-label.is-selected,
+.room-label.is-selected {
+  opacity: 1;
+  border-color: rgba(224, 242, 254, 0.82);
+  background: rgba(8, 13, 24, 0.9);
+  box-shadow: 0 0 0 1px rgba(224, 242, 254, 0.16) inset, 0 0 18px rgba(125, 211, 252, 0.18), 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
+.agent-label.is-active,
+.parent-label.is-active {
+  opacity: 1;
 }
 
 .empty-state {

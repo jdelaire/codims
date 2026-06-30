@@ -167,6 +167,7 @@ const state = {
   projectGroups: [],
   actionInboxProjectGroups: [],
   selectedMode: null,
+  selectedProject: null,
   selectedDigest: null,
   selectedParentKey: null,
   selectedId: null,
@@ -175,6 +176,7 @@ const state = {
   rooms: new Map(),
   parentAgents: new Map(),
   agents: new Map(),
+  roomLabels: new Map(),
   parentLabels: new Map(),
   agentLabels: new Map(),
   digestObjects: new Map(),
@@ -864,6 +866,97 @@ function addRoomSelectables() {
   }
 }
 
+function currentSceneSelection() {
+  return {
+    mode: state.selectedMode,
+    project: state.selectedProject,
+    threadId: state.selectedId,
+    parentKey: state.selectedParentKey,
+    digestKey: state.selectedDigest?.key || null,
+  };
+}
+
+function selectedSceneObject(object) {
+  return sceneObjectIsSelected(currentSceneSelection(), object);
+}
+
+function updateRoomVisualState(room, project) {
+  const selected = selectedSceneObject({ type: "room", project });
+  const parts = room.userData.parts;
+  parts.floorGlow.material.opacity = selected
+    ? focusStudio.room.selectedGlowOpacity
+    : focusStudio.room.floorGlowOpacity;
+  parts.border.material.opacity = selected
+    ? focusStudio.room.selectedBorderOpacity
+    : focusStudio.room.borderOpacity;
+  parts.frontRail.material.opacity = selected ? 0.62 : focusStudio.room.railOpacity;
+  parts.signBack.material.emissiveIntensity = selected ? 0.16 : 0.08;
+
+  const label = state.roomLabels.get(project);
+  if (label) {
+    label.classList.toggle("is-selected", selected);
+  }
+}
+
+function updateParentVisualState(parentAgent, parentKey) {
+  const parentGroup = parentAgent.userData.parentGroup;
+  const selected = selectedSceneObject({
+    type: "parent",
+    parentKey,
+    threadId: parentGroup?.lead?.id,
+  });
+  const parts = parentAgent.userData.parts;
+  if (!parentGroup?.isActive) {
+    parts.glowMaterial.opacity = selected ? 0.34 : 0.16;
+  }
+  parts.halo.scale.setScalar(selected ? 1.12 : 1);
+  const label = state.parentLabels.get(parentKey);
+  if (label) {
+    label.classList.toggle("is-selected", selected);
+  }
+}
+
+function updateAgentVisualState(agent, threadId) {
+  const selected = selectedSceneObject({ type: "agent", threadId });
+  const parts = agent.userData.parts;
+  if (agent.userData.thread?.state !== "ACTIVE") {
+    parts.glowMaterial.opacity = selected ? 0.34 : agentGlowForState(agent.userData.thread).opacity;
+  }
+  parts.ring.scale.setScalar(selected ? 1.12 : 1);
+  const label = state.agentLabels.get(threadId);
+  if (label) {
+    label.classList.toggle("is-selected", selected);
+  }
+}
+
+function updateDigestVisualState(digestObject, digestKey) {
+  const selected = selectedSceneObject({ type: "digest", digestKey });
+  const parts = digestObject.userData.parts;
+  if (digestObject.userData.doneObjectInactive) {
+    parts.ringMaterial.opacity = selected ? 0.24 : 0.1;
+  }
+  parts.ring.scale.setScalar(selected ? 1.12 : 1);
+  const label = state.digestLabels.get(digestKey);
+  if (label) {
+    label.classList.toggle("is-selected", selected);
+  }
+}
+
+function updateSceneVisualStates() {
+  for (const [project, room] of state.rooms.entries()) {
+    updateRoomVisualState(room, project);
+  }
+  for (const [parentKey, parentAgent] of state.parentAgents.entries()) {
+    updateParentVisualState(parentAgent, parentKey);
+  }
+  for (const [threadId, agent] of state.agents.entries()) {
+    updateAgentVisualState(agent, threadId);
+  }
+  for (const [digestKey, digestObject] of state.digestObjects.entries()) {
+    updateDigestVisualState(digestObject, digestKey);
+  }
+}
+
 function reconcileRooms(projectGroups) {
   const activeProjects = new Set(projectGroups.map((group) => group.project));
   const roomLayouts = new Map(
@@ -904,6 +997,10 @@ function reconcileRooms(projectGroups) {
       display.privacy = state.privacy;
     }
   });
+
+  for (const [project, room] of state.rooms.entries()) {
+    updateRoomVisualState(room, project);
+  }
 }
 
 function reconcileAgents(projectGroups) {
@@ -1089,6 +1186,7 @@ function reconcileAgents(projectGroups) {
     }
   }
 
+  updateSceneVisualStates();
   updateAgentLabelVisibility();
 }
 
@@ -1441,6 +1539,7 @@ async function refreshThreads() {
 function showDetails(thread, parentGroup = null) {
   const changedSelection = state.selectedId !== thread.id;
   state.selectedMode = "thread";
+  state.selectedProject = null;
   state.selectedDigest = null;
   state.selectedParentKey = parentGroup?.key || null;
   state.selectedId = thread.id;
@@ -1459,6 +1558,7 @@ function showDetails(thread, parentGroup = null) {
 
 function showDigest(parentGroup) {
   state.selectedMode = "digest";
+  state.selectedProject = null;
   state.selectedDigest = parentGroup;
   state.selectedParentKey = null;
   state.selectedId = null;
@@ -1468,6 +1568,23 @@ function showDigest(parentGroup) {
   dom.threadMessageInput.value = "";
   dom.threadMessageStatus.textContent = "";
   renderDigestDetails(parentGroup);
+}
+
+function showRoomFocus(room) {
+  state.selectedMode = "room";
+  state.selectedProject = room.userData.project || null;
+  state.selectedDigest = null;
+  state.selectedParentKey = null;
+  state.selectedId = null;
+  state.selectedThread = null;
+  state.detailSeq += 1;
+  state.sendSeq += 1;
+  dom.threadMessageInput.value = "";
+  dom.threadMessageStatus.textContent = "";
+  dom.detailsEmpty.hidden = false;
+  dom.detailsContent.hidden = true;
+  updateMessageComposer(null);
+  updateSceneVisualStates();
 }
 
 function canSendToThread(_thread) {
@@ -1708,6 +1825,7 @@ async function loadThreadDetail(thread) {
 
 function clearDetails() {
   state.selectedMode = null;
+  state.selectedProject = null;
   state.selectedDigest = null;
   state.selectedParentKey = null;
   state.selectedId = null;
@@ -1715,6 +1833,7 @@ function clearDetails() {
   updateAgentLabelVisibility();
   dom.detailsEmpty.hidden = false;
   dom.detailsContent.hidden = true;
+  updateSceneVisualStates();
   updateMessageComposer(null);
 }
 
@@ -1781,6 +1900,10 @@ function pickSceneAt(event) {
   const thread = picked.userData.thread || state.threads.find((item) => item.id === threadId);
   if (thread) {
     showDetails(thread);
+    return;
+  }
+  if (room) {
+    showRoomFocus(room);
     return;
   }
   clearDetails();
@@ -1881,6 +2004,7 @@ function animateAgents(elapsed) {
   for (const agent of state.agents.values()) {
     const thread = agent.userData.thread;
     const parts = agent.userData.parts;
+    const selected = selectedSceneObject({ type: "agent", threadId: thread.id });
     if (thread.state === "ACTIVE") {
       const speed = thread.intensity === "energetic" ? 5.8 : 3.4;
       agent.position.y = Math.sin(elapsed * speed + hashString(thread.id)) * 0.08;
@@ -1889,20 +2013,24 @@ function animateAgents(elapsed) {
     } else if (thread.state === "DONE") {
       agent.position.y = 0;
       parts.head.rotation.z = 0;
-      parts.ring.scale.setScalar(1);
+      parts.ring.scale.setScalar(selected ? 1.12 : 1);
     } else {
       agent.position.y = Math.sin(elapsed * 1.2 + hashString(thread.id)) * 0.008;
       parts.head.rotation.z = Math.sin(elapsed * 0.8) * 0.012;
-      parts.ring.scale.setScalar(1);
+      parts.ring.scale.setScalar(selected ? 1.12 : 1);
     }
   }
 
   for (const digestObject of state.digestObjects.values()) {
     const parts = digestObject.userData.parts;
     if (digestObject.userData.doneObjectInactive) {
+      const selected = selectedSceneObject({
+        type: "digest",
+        digestKey: digestObject.userData.digestKey,
+      });
       parts.token.rotation.y = 0;
-      parts.ring.scale.setScalar(1);
-      parts.ringMaterial.opacity = 0.1;
+      parts.ring.scale.setScalar(selected ? 1.12 : 1);
+      parts.ringMaterial.opacity = selected ? 0.24 : 0.1;
       continue;
     }
     const pulse = 1 + Math.sin(elapsed * 1.7 + hashString(digestObject.userData.digestKey || "")) * 0.035;
