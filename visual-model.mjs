@@ -147,9 +147,12 @@ export function privacyPath(value, privacyMode) {
 }
 
 export function normalizePreferences(raw = {}) {
+  let maxAgeHours = normalizeNumericPreference(raw.maxAgeHours, "8", (value) => value >= 0);
+  if (raw.prefsVersion !== 2 && maxAgeHours === "12") {
+    maxAgeHours = "8";
+  }
   return {
-    activeMinutes: normalizeNumericPreference(raw.activeMinutes, "5", (value) => value > 0),
-    maxAgeHours: normalizeNumericPreference(raw.maxAgeHours, "12", (value) => value >= 0),
+    maxAgeHours,
     labels: raw.labels === undefined ? true : Boolean(raw.labels),
     showInactive: Boolean(raw.showInactive),
     privacy: Boolean(raw.privacy),

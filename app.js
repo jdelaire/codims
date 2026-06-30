@@ -26,7 +26,6 @@ const dom = {
   visibleCount: document.querySelector("#visibleCount"),
   projectCount: document.querySelector("#projectCount"),
   controls: document.querySelector("#controls"),
-  activeMinutes: document.querySelector("#activeMinutes"),
   maxAgeHours: document.querySelector("#maxAgeHours"),
   densityMode: document.querySelector("#densityMode"),
   threadSearch: document.querySelector("#threadSearch"),
@@ -110,7 +109,7 @@ function savePreferences() {
     localStorage.setItem(
       PREFS_KEY,
       JSON.stringify({
-        activeMinutes: dom.activeMinutes.value,
+        prefsVersion: 2,
         maxAgeHours: dom.maxAgeHours.value,
         labels: state.labels,
         showInactive: state.showInactive,
@@ -125,7 +124,6 @@ function savePreferences() {
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050711);
-scene.fog = new THREE.Fog(0x050711, 20, 58);
 
 const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 1000);
 camera.position.set(10, 10, 14);
@@ -213,7 +211,7 @@ function roomPosition(index, total, gapX = 11, gapZ = 8.5) {
   );
 }
 
-const PROJECT_SIGN_Y = 3.45;
+const PROJECT_SIGN_Y = 5.6;
 const PROJECT_SIGN_STRUT_BASE_Y = 0.18;
 const PROJECT_SIGN_STRUT_TOP_Y = PROJECT_SIGN_Y - 0.18;
 const PROJECT_SIGN_STRUT_HEIGHT = PROJECT_SIGN_STRUT_TOP_Y - PROJECT_SIGN_STRUT_BASE_Y;
@@ -904,8 +902,7 @@ function updateStatus(payload) {
 
 async function fetchThreads() {
   const params = new URLSearchParams({
-    activeMinutes: dom.activeMinutes.value || "5",
-    maxAgeHours: dom.maxAgeHours.value || "12",
+    maxAgeHours: dom.maxAgeHours.value || "8",
   });
   const response = await fetch(`/api/threads?${params.toString()}`, { cache: "no-store" });
   if (!response.ok) {
@@ -986,8 +983,8 @@ function showDetails(thread) {
   loadThreadDetail(thread);
 }
 
-function canSendToThread(thread) {
-  return thread?.role === "thread";
+function canSendToThread(_thread) {
+  return false;
 }
 
 function updateThreadSendControls(thread) {
@@ -1369,10 +1366,6 @@ function bindEvents() {
     savePreferences();
     refreshThreads();
   });
-  dom.activeMinutes.addEventListener("change", () => {
-    savePreferences();
-    refreshThreads();
-  });
   dom.maxAgeHours.addEventListener("change", () => {
     savePreferences();
     refreshThreads();
@@ -1406,7 +1399,6 @@ function startPolling() {
 resize();
 bindEvents();
 const prefs = loadPreferences();
-dom.activeMinutes.value = prefs.activeMinutes;
 dom.maxAgeHours.value = prefs.maxAgeHours;
 state.density = prefs.density;
 dom.densityMode.value = prefs.density;

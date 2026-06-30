@@ -20,7 +20,7 @@ The app is intentionally small:
 - Shows active handoff arcs between main threads and active agents.
 - Click a room or agent to center the camera on that room.
 - Click a thread to inspect title, role, project, parent thread, agent prompt, and last response.
-- Send messages only to selected main threads with `role: "thread"`.
+- Message sending is temporarily disabled.
 
 ## Requirements
 
@@ -31,13 +31,19 @@ The app is intentionally small:
 ## Run
 
 ```bash
-python3 server.py --host 127.0.0.1 --port 8765
+python3 server.py --port 8765
 ```
 
-Open:
+By default, Codims listens on `0.0.0.0` so it can be reached from other devices on your network. Open locally:
 
 ```text
 http://127.0.0.1:8765/
+```
+
+From another device, use your machine's LAN IP:
+
+```text
+http://<machine-ip>:8765/
 ```
 
 Quick launch on macOS:
@@ -69,12 +75,12 @@ node test_visual_model.mjs
 ## API
 
 ```text
-GET /api/threads?activeMinutes=5&maxAgeHours=12
+GET /api/threads?maxAgeHours=8
 GET /api/thread/<thread-id>
 POST /api/thread/<thread-id>/message
 ```
 
-Message sending is guarded server-side and only works when the request role is `thread`.
+Message sending is temporarily disabled server-side.
 
 ## Privacy
 

@@ -4,6 +4,7 @@ import threading
 import time
 import unittest
 import urllib.request
+from unittest import mock
 
 import server
 
@@ -84,7 +85,7 @@ class ServerThreadPayloadTests(unittest.TestCase):
 
         self.assertEqual(
             payload["capabilities"],
-            {"read_threads": True, "send_messages": True},
+            {"read_threads": True, "send_messages": False},
         )
 
     def test_payload_reads_app_server_subagents_and_shapes_json(self):
@@ -237,7 +238,7 @@ class ServerThreadPayloadTests(unittest.TestCase):
     def test_invalid_query_values_fall_back_to_defaults(self):
         self.assertEqual(
             server.parse_thread_params({"activeMinutes": ["bad"], "maxAgeHours": ["-2"]}),
-            (5.0, 12.0),
+            (1.0, 8.0),
         )
 
     def test_age_seconds_returns_truncated_non_negative_int(self):
@@ -357,6 +358,21 @@ class ServerThreadPayloadTests(unittest.TestCase):
         self.assertIsNone(payload["thread"])
         self.assertIn("boom", payload["error"])
 
+    def test_send_thread_message_disabled_by_default_does_not_call_app_server(self):
+        fake = FakeAppServerClient()
+
+        payload = server.send_thread_message_payload(
+            "main",
+            "Ship it",
+            "thread",
+            client_factory=lambda: fake,
+            now_ms=NOW_MS,
+        )
+
+        self.assertFalse(payload["sent"])
+        self.assertIn("disabled", payload["error"])
+        self.assertEqual(fake.calls, [])
+
     def test_send_thread_message_resumes_and_starts_role_thread(self):
         fake = FakeAppServerClient(
             {
@@ -365,13 +381,14 @@ class ServerThreadPayloadTests(unittest.TestCase):
             }
         )
 
-        payload = server.send_thread_message_payload(
-            "main",
-            "  Ship it  ",
-            "thread",
-            client_factory=lambda: fake,
-            now_ms=NOW_MS,
-        )
+        with mock.patch.object(server, "MESSAGE_SENDING_ENABLED", True):
+            payload = server.send_thread_message_payload(
+                "main",
+                "  Ship it  ",
+                "thread",
+                client_factory=lambda: fake,
+                now_ms=NOW_MS,
+            )
 
         self.assertTrue(payload["sent"])
         self.assertEqual(payload["thread_id"], "main")
@@ -392,14 +409,15 @@ class ServerThreadPayloadTests(unittest.TestCase):
     def test_send_thread_message_dry_run_does_not_call_app_server(self):
         fake = FakeAppServerClient()
 
-        payload = server.send_thread_message_payload(
-            "main",
-            "Ship it",
-            "thread",
-            client_factory=lambda: fake,
-            now_ms=NOW_MS,
-            dry_run=True,
-        )
+        with mock.patch.object(server, "MESSAGE_SENDING_ENABLED", True):
+            payload = server.send_thread_message_payload(
+                "main",
+                "Ship it",
+                "thread",
+                client_factory=lambda: fake,
+                now_ms=NOW_MS,
+                dry_run=True,
+            )
 
         self.assertFalse(payload["sent"])
         self.assertTrue(payload["dry_run"])
@@ -409,13 +427,14 @@ class ServerThreadPayloadTests(unittest.TestCase):
     def test_send_thread_message_refuses_child_agent_role(self):
         fake = FakeAppServerClient()
 
-        payload = server.send_thread_message_payload(
-            "child",
-            "Ship it",
-            "worker",
-            client_factory=lambda: fake,
-            now_ms=NOW_MS,
-        )
+        with mock.patch.object(server, "MESSAGE_SENDING_ENABLED", True):
+            payload = server.send_thread_message_payload(
+                "child",
+                "Ship it",
+                "worker",
+                client_factory=lambda: fake,
+                now_ms=NOW_MS,
+            )
 
         self.assertFalse(payload["sent"])
         self.assertIn("role thread only", payload["error"])
@@ -424,13 +443,14 @@ class ServerThreadPayloadTests(unittest.TestCase):
     def test_send_thread_message_refuses_empty_message(self):
         fake = FakeAppServerClient()
 
-        payload = server.send_thread_message_payload(
-            "main",
-            "   ",
-            "thread",
-            client_factory=lambda: fake,
-            now_ms=NOW_MS,
-        )
+        with mock.patch.object(server, "MESSAGE_SENDING_ENABLED", True):
+            payload = server.send_thread_message_payload(
+                "main",
+                "   ",
+                "thread",
+                client_factory=lambda: fake,
+                now_ms=NOW_MS,
+            )
 
         self.assertFalse(payload["sent"])
         self.assertIn("empty", payload["error"])
@@ -536,13 +556,7 @@ class HttpHandlerTests(unittest.TestCase):
         self.assertEqual(payload["thread"]["id"], "active")
         self.assertEqual(payload["thread"]["agent_prompt"], "Inspect clicked thread.")
 
-    def test_thread_message_api_sends_role_thread_message(self):
-        self.fake.responses.update(
-            {
-                "thread/resume": {"thread": {"id": "main"}},
-                "turn/start": {"turn": {"id": "turn-2"}},
-            }
-        )
+    def test_thread_message_api_refuses_disabled_messages(self):
         url = f"{self.base_url}/api/thread/main/message"
         request = urllib.request.Request(
             url,
@@ -558,18 +572,9 @@ class HttpHandlerTests(unittest.TestCase):
             )
             payload = json.loads(response.read().decode("utf-8"))
 
-        self.assertTrue(payload["sent"])
-        self.assertIn(("thread/resume", {"threadId": "main"}), self.fake.calls)
-        self.assertIn(
-            (
-                "turn/start",
-                {
-                    "threadId": "main",
-                    "input": [{"type": "text", "text": "Ship it"}],
-                },
-            ),
-            self.fake.calls,
-        )
+        self.assertFalse(payload["sent"])
+        self.assertIn("disabled", payload["error"])
+        self.assertEqual(self.fake.calls, [])
 
 
 if __name__ == "__main__":

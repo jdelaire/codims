@@ -13,9 +13,10 @@ from typing import Any
 
 
 ROOT_DIR = Path(__file__).resolve().parent
-DEFAULT_ACTIVE_MINUTES = 5.0
-DEFAULT_MAX_AGE_HOURS = 12.0
+DEFAULT_ACTIVE_MINUTES = 1.0
+DEFAULT_MAX_AGE_HOURS = 8.0
 DEFAULT_APP_SERVER_TIMEOUT = 12.0
+MESSAGE_SENDING_ENABLED = False
 APP_SERVER_PAGE_LIMIT = 100
 APP_SERVER_MAX_PAGES = 10
 INTERACTIVE_SOURCE_KINDS = ["cli", "vscode", "exec", "appServer"]
@@ -537,6 +538,13 @@ def send_thread_message_payload(
     if now_ms is None:
         now_ms = int(time.time() * 1000)
 
+    if not MESSAGE_SENDING_ENABLED:
+        return thread_message_error_payload(
+            thread_id,
+            now_ms,
+            "message sending is disabled",
+        )
+
     if role != "thread":
         return thread_message_error_payload(
             thread_id,
@@ -605,7 +613,10 @@ def get_threads_payload(
         return empty_payload(now_ms, error)
 
     payload = build_payload(threads, now_ms, active_minutes)
-    payload["capabilities"] = {"read_threads": True, "send_messages": True}
+    payload["capabilities"] = {
+        "read_threads": True,
+        "send_messages": MESSAGE_SENDING_ENABLED,
+    }
     return payload
 
 
@@ -702,7 +713,7 @@ def make_handler(static_dir, client_factory=None):
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--codex-bin", default="codex")
     parser.add_argument(

@@ -3,11 +3,15 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-HOST="${HOST:-127.0.0.1}"
+HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8765}"
 CODEX_BIN="${CODEX_BIN:-codex}"
-URL="http://${HOST}:${PORT}/"
-THREADS_URL="http://${HOST}:${PORT}/api/threads?activeMinutes=5&maxAgeHours=12"
+URL_HOST="${HOST}"
+if [[ "${HOST}" == "0.0.0.0" ]]; then
+  URL_HOST="127.0.0.1"
+fi
+URL="http://${URL_HOST}:${PORT}/"
+THREADS_URL="http://${URL_HOST}:${PORT}/api/threads?maxAgeHours=8"
 
 port_is_listening() {
   if command -v lsof >/dev/null 2>&1; then
@@ -16,7 +20,7 @@ port_is_listening() {
   fi
 
   if command -v python3 >/dev/null 2>&1; then
-    python3 - "${HOST}" "${PORT}" >/dev/null 2>&1 <<'PY'
+    python3 - "${URL_HOST}" "${PORT}" >/dev/null 2>&1 <<'PY'
 import socket
 import sys
 

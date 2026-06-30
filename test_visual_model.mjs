@@ -78,7 +78,6 @@ assert.equal(densityScale("normal"), 1);
 assert.equal(densityScale("compact"), 0.78);
 assert.equal(densityScale("bad"), 1);
 assert.deepEqual(normalizePreferences({ activeMinutes: "8", maxAgeHours: "24", labels: false }), {
-  activeMinutes: "8",
   maxAgeHours: "24",
   labels: false,
   showInactive: false,
@@ -86,17 +85,18 @@ assert.deepEqual(normalizePreferences({ activeMinutes: "8", maxAgeHours: "24", l
   density: "normal",
 });
 assert.deepEqual(normalizePreferences({ activeMinutes: "", maxAgeHours: "-1", density: "bad" }), {
-  activeMinutes: "5",
-  maxAgeHours: "12",
+  maxAgeHours: "8",
   labels: true,
   showInactive: false,
   privacy: false,
   density: "normal",
 });
-assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: "" }).maxAgeHours, "12");
-assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: "   " }).maxAgeHours, "12");
-assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: null }).maxAgeHours, "12");
+assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: "" }).maxAgeHours, "8");
+assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: "   " }).maxAgeHours, "8");
+assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: null }).maxAgeHours, "8");
 assert.equal(normalizePreferences({ activeMinutes: "5", maxAgeHours: "0" }).maxAgeHours, "0");
+assert.equal(normalizePreferences({ maxAgeHours: "12" }).maxAgeHours, "8");
+assert.equal(normalizePreferences({ prefsVersion: 2, maxAgeHours: "12" }).maxAgeHours, "12");
 
 const projectGroups = buildProjectParentGroups(threads);
 assert.equal(projectGroups.length, 1);
