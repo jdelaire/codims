@@ -7,6 +7,7 @@ import {
   filterVisibleProjectGroups,
   handoffShouldAnimate,
   matchesThreadSearch,
+  normalizePreferences,
   parentGroupOffset,
   privacyLabel,
   privacyPath,
@@ -72,6 +73,22 @@ assert.equal(privacyLabel("Build Codims", false), "Build Codims");
 assert.equal(privacyLabel("Build Codims", true), "Hidden");
 assert.equal(privacyPath("/repo/app", false), "/repo/app");
 assert.equal(privacyPath("/repo/app", true), "Hidden");
+assert.deepEqual(normalizePreferences({ activeMinutes: "8", maxAgeHours: "24", labels: false }), {
+  activeMinutes: "8",
+  maxAgeHours: "24",
+  labels: false,
+  showInactive: false,
+  privacy: false,
+  density: "normal",
+});
+assert.deepEqual(normalizePreferences({ activeMinutes: "", maxAgeHours: "-1", density: "bad" }), {
+  activeMinutes: "5",
+  maxAgeHours: "12",
+  labels: true,
+  showInactive: false,
+  privacy: false,
+  density: "normal",
+});
 
 const projectGroups = buildProjectParentGroups(threads);
 assert.equal(projectGroups.length, 1);

@@ -142,6 +142,19 @@ export function privacyPath(value, privacyMode) {
   return String(value || "");
 }
 
+export function normalizePreferences(raw = {}) {
+  const active = Number(raw.activeMinutes);
+  const maxAge = Number(raw.maxAgeHours);
+  return {
+    activeMinutes: active > 0 ? String(raw.activeMinutes) : "5",
+    maxAgeHours: maxAge >= 0 ? String(raw.maxAgeHours) : "12",
+    labels: raw.labels === undefined ? true : Boolean(raw.labels),
+    showInactive: Boolean(raw.showInactive),
+    privacy: Boolean(raw.privacy),
+    density: raw.density === "compact" ? "compact" : "normal",
+  };
+}
+
 export function handoffShouldAnimate(parentGroup, thread) {
   return Boolean(parentGroup?.isHandoffActive && thread?.state === "ACTIVE");
 }
