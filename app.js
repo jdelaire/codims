@@ -1204,7 +1204,19 @@ function reconcileAgents(projectGroups) {
       parentParts.head.userData.thread = parentGroup.lead;
       parentParts.head.userData.parentGroup = parentGroup;
       parentParts.head.userData.room = room;
-      state.selectable.push(parentParts.body, parentParts.head);
+      for (const pickable of [parentParts.shoulder, parentParts.visor, parentParts.core]) {
+        pickable.userData.threadId = parentGroup.lead.id;
+        pickable.userData.thread = parentGroup.lead;
+        pickable.userData.parentGroup = parentGroup;
+        pickable.userData.room = room;
+      }
+      state.selectable.push(
+        parentParts.body,
+        parentParts.head,
+        parentParts.shoulder,
+        parentParts.visor,
+        parentParts.core,
+      );
 
       const parentLabel = state.parentLabels.get(parentGroup.key);
       const parentCssColor = cssHexColor(parentColorHex);
@@ -1264,7 +1276,12 @@ function reconcileAgents(projectGroups) {
         parts.head.userData.threadId = thread.id;
         parts.head.userData.thread = thread;
         parts.head.userData.room = room;
-        state.selectable.push(parts.body, parts.head);
+        for (const pickable of [parts.collar, parts.statusLight]) {
+          pickable.userData.threadId = thread.id;
+          pickable.userData.thread = thread;
+          pickable.userData.room = room;
+        }
+        state.selectable.push(parts.body, parts.head, parts.collar, parts.statusLight);
 
         const label = state.agentLabels.get(thread.id);
         label.textContent = visibleActivityLabel(
