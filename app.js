@@ -23,6 +23,7 @@ import {
   projectRoomLayout,
   reviewStateForParentGroup,
   roomCameraFocus,
+  sceneObjectIsSelected,
   serializeReviewedThreadIds,
   shouldPollThreads,
   shouldUseDenseLabels,
@@ -98,6 +99,29 @@ const parentPalette = [
   0xfbbf24,
   0x38bdf8,
 ];
+
+const focusStudio = {
+  sceneBackground: 0x04060d,
+  ambientSky: 0xb8d7f2,
+  ambientGround: 0x111827,
+  gridCenter: 0x1d283a,
+  gridLine: 0x0b1220,
+  active: 0x34d399,
+  done: 0xd97706,
+  digest: 0xf59e0b,
+  reviewed: 0x64748b,
+  room: {
+    floor: 0x101827,
+    backWall: 0x121a29,
+    sideWall: 0x0b1220,
+    signBack: 0x07101d,
+    floorGlowOpacity: 0.035,
+    borderOpacity: 0.26,
+    railOpacity: 0.3,
+    selectedGlowOpacity: 0.09,
+    selectedBorderOpacity: 0.68,
+  },
+};
 
 const PREFS_KEY = "codims.preferences.v1";
 const REVIEWED_THREADS_KEY = "codims.reviewedThreads.v1";
@@ -187,7 +211,7 @@ function savePreferences() {
 }
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x050711);
+scene.background = new THREE.Color(focusStudio.sceneBackground);
 
 const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 1000);
 camera.position.set(10, 10, 14);
@@ -196,7 +220,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+renderer.toneMappingExposure = 1;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 dom.scene.appendChild(renderer.domElement);
@@ -211,20 +235,20 @@ const clock = new THREE.Clock();
 const CLICK_MOVE_LIMIT_PX = 6;
 let pendingPointerPick = null;
 
-const ambient = new THREE.HemisphereLight(0xcfe7ff, 0x1d1228, 2.45);
+const ambient = new THREE.HemisphereLight(focusStudio.ambientSky, focusStudio.ambientGround, 1.65);
 scene.add(ambient);
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 2.8);
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.35);
 keyLight.position.set(9, 16, 7);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.set(2048, 2048);
 scene.add(keyLight);
 
-const rimLight = new THREE.DirectionalLight(0x8b5cf6, 1.15);
+const rimLight = new THREE.DirectionalLight(0x7dd3fc, 0.48);
 rimLight.position.set(-10, 8, -6);
 scene.add(rimLight);
 
-const grid = new THREE.GridHelper(80, 80, 0x233047, 0x101725);
+const grid = new THREE.GridHelper(80, 80, focusStudio.gridCenter, focusStudio.gridLine);
 grid.position.y = -0.03;
 scene.add(grid);
 
@@ -326,15 +350,15 @@ function updateProjectDisplayTexture(texture, project, count, privacyMode = fals
   const ctx = canvas.getContext("2d");
   const text = projectDisplayText(privacyLabel(project, privacyMode), count);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "rgba(7, 12, 24, 0.96)";
+  ctx.fillStyle = "rgba(5, 10, 20, 0.98)";
   drawRoundedRect(ctx, 22, 24, canvas.width - 44, canvas.height - 48, 34);
   ctx.fill();
   ctx.lineWidth = 10;
-  ctx.strokeStyle = "rgba(34, 211, 238, 0.86)";
+  ctx.strokeStyle = "rgba(125, 211, 252, 0.48)";
   ctx.stroke();
-  ctx.shadowColor = "rgba(34, 211, 238, 0.78)";
-  ctx.shadowBlur = 26;
-  ctx.fillStyle = "#dbeafe";
+  ctx.shadowColor = "rgba(125, 211, 252, 0.36)";
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = "#e5eef8";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   const fontSize = fitProjectDisplayFont(ctx, text, canvas.width - 140);
@@ -352,9 +376,9 @@ function createRoom(project) {
   const floor = new THREE.Mesh(
     new THREE.BoxGeometry(1, 0.16, 1),
     new THREE.MeshStandardMaterial({
-      color: 0x141b2a,
-      roughness: 0.58,
-      metalness: 0.14,
+      color: focusStudio.room.floor,
+      roughness: 0.68,
+      metalness: 0.08,
     }),
   );
   floor.receiveShadow = true;
@@ -365,7 +389,7 @@ function createRoom(project) {
     new THREE.MeshBasicMaterial({
       color: projectAccent,
       transparent: true,
-      opacity: 0.075,
+      opacity: focusStudio.room.floorGlowOpacity,
       depthWrite: false,
     }),
   );
@@ -375,7 +399,7 @@ function createRoom(project) {
 
   const border = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 0.18, 1)),
-    new THREE.LineBasicMaterial({ color: projectAccent, transparent: true, opacity: 0.48 }),
+    new THREE.LineBasicMaterial({ color: projectAccent, transparent: true, opacity: focusStudio.room.borderOpacity }),
   );
   border.position.y = 0.02;
   group.add(border);
@@ -385,7 +409,7 @@ function createRoom(project) {
     new THREE.MeshBasicMaterial({
       color: projectAccent,
       transparent: true,
-      opacity: 0.62,
+      opacity: focusStudio.room.railOpacity,
     }),
   );
   group.add(frontRail);
@@ -393,11 +417,11 @@ function createRoom(project) {
   const backWall = new THREE.Mesh(
     new THREE.BoxGeometry(1, 2.2, 0.14),
     new THREE.MeshStandardMaterial({
-      color: 0x192235,
-      roughness: 0.72,
-      metalness: 0.08,
+      color: focusStudio.room.backWall,
+      roughness: 0.78,
+      metalness: 0.04,
       emissive: projectAccent,
-      emissiveIntensity: 0.015,
+      emissiveIntensity: 0.006,
     }),
   );
   backWall.position.set(0, 1.05, -3.35);
@@ -407,11 +431,11 @@ function createRoom(project) {
   const sideWall = new THREE.Mesh(
     new THREE.BoxGeometry(0.14, 2.2, 1),
     new THREE.MeshStandardMaterial({
-      color: 0x101827,
-      roughness: 0.76,
-      metalness: 0.06,
+      color: focusStudio.room.sideWall,
+      roughness: 0.8,
+      metalness: 0.04,
       emissive: projectAccent,
-      emissiveIntensity: 0.012,
+      emissiveIntensity: 0.005,
     }),
   );
   sideWall.position.set(-4.55, 1.05, 0);
@@ -422,11 +446,11 @@ function createRoom(project) {
   const signBack = new THREE.Mesh(
     new THREE.BoxGeometry(5.25, 1.28, 0.16),
     new THREE.MeshStandardMaterial({
-      color: 0x07101d,
-      emissive: 0x0b4251,
-      emissiveIntensity: 0.24,
-      roughness: 0.42,
-      metalness: 0.18,
+      color: focusStudio.room.signBack,
+      emissive: 0x0b2a35,
+      emissiveIntensity: 0.08,
+      roughness: 0.52,
+      metalness: 0.12,
     }),
   );
   signBack.position.set(0, PROJECT_SIGN_Y, -2.86);
@@ -447,7 +471,7 @@ function createRoom(project) {
   const strutMaterial = new THREE.MeshBasicMaterial({
     color: projectAccent,
     transparent: true,
-    opacity: 0.72,
+    opacity: 0.42,
   });
   const struts = [];
   for (const x of [-2.22, 2.22]) {
@@ -464,7 +488,7 @@ function createRoom(project) {
     new THREE.MeshBasicMaterial({
       color: projectAccent,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.26,
     }),
   );
   linkRail.position.set(0, 0.18, -2.86);
