@@ -380,6 +380,131 @@ h1::before {
   line-height: 1.45;
 }
 
+.review-lane {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(172, 188, 209, 0.16);
+}
+
+.review-lane-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.review-lane h2 {
+  font-size: 15px;
+  line-height: 1.1;
+}
+
+#reviewCount {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+#reviewUnreviewedToggle,
+.review-toggle,
+.review-item-main {
+  border: 1px solid rgba(172, 188, 209, 0.2);
+  border-radius: 6px;
+  background: rgba(8, 12, 22, 0.72);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+#reviewUnreviewedToggle {
+  flex: none;
+  padding: 6px 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#reviewUnreviewedToggle[aria-pressed="true"] {
+  color: #cffafe;
+  border-color: rgba(34, 211, 238, 0.62);
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.review-list {
+  display: grid;
+  gap: 7px;
+}
+
+.review-empty {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.review-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: stretch;
+}
+
+.review-item-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px;
+  text-align: left;
+}
+
+.review-item-main:hover,
+.review-toggle:hover,
+#reviewUnreviewedToggle:hover {
+  border-color: rgba(34, 211, 238, 0.48);
+}
+
+.review-item-main:focus-visible,
+.review-toggle:focus-visible,
+#reviewUnreviewedToggle:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.45);
+  outline-offset: 2px;
+}
+
+.review-item-meta {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.review-item-title {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 720;
+  line-height: 1.25;
+}
+
+.review-item-snippet {
+  color: #cbd5e1;
+  font-size: 11px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.review-toggle {
+  width: 76px;
+  padding: 6px 7px;
+  color: #fef3c7;
+  font-size: 12px;
+}
+
+.review-toggle[aria-pressed="true"] {
+  color: #d1fae5;
+  border-color: rgba(52, 211, 153, 0.58);
+  background: rgba(52, 211, 153, 0.12);
+}
+
 .details-heading {
   display: flex;
   align-items: start;

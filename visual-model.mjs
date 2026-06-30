@@ -65,6 +65,29 @@ export function buildReviewItems(projectGroups, reviewedThreadIds = new Set()) {
   );
 }
 
+export function filterReviewItems(reviewItems, unreviewedOnly) {
+  if (!unreviewedOnly) {
+    return reviewItems;
+  }
+  return reviewItems.filter((item) => !item.reviewed);
+}
+
+export function parseReviewedThreadIds(raw) {
+  try {
+    const parsed = JSON.parse(raw || "[]");
+    if (!Array.isArray(parsed)) {
+      return new Set();
+    }
+    return new Set(parsed.filter((id) => typeof id === "string" && id));
+  } catch {
+    return new Set();
+  }
+}
+
+export function serializeReviewedThreadIds(reviewedThreadIds) {
+  return JSON.stringify([...reviewedThreadIds].sort());
+}
+
 export function reviewStateForParentGroup(parentGroup, reviewedThreadIds = new Set()) {
   const digestItems = parentGroup.digestItems || [];
   const reviewed = digestItems.filter((item) => reviewedThreadIds.has(item.id)).length;

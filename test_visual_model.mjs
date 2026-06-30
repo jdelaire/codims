@@ -7,16 +7,19 @@ import {
   childHandoffOffset,
   childVisualLayout,
   densityScale,
+  filterReviewItems,
   filterVisibleProjectGroups,
   handoffShouldAnimate,
   matchesThreadSearch,
   normalizePreferences,
   parentGroupOffset,
+  parseReviewedThreadIds,
   privacyLabel,
   privacyPath,
   projectRoomLayout,
   projectRoomGridSpacing,
   projectDisplayText,
+  serializeReviewedThreadIds,
   reviewStateForParentGroup,
   roomCameraFocus,
   shouldPollThreads,
@@ -241,6 +244,18 @@ assert.deepEqual(
   ],
 );
 assert.equal("reviewed" in parentGroup.digestItems[0], false);
+assert.deepEqual(
+  filterReviewItems(reviewItems, true).map((item) => item.id),
+  ["child-d", "parent"],
+);
+assert.deepEqual(
+  filterReviewItems(reviewItems, false).map((item) => item.id),
+  ["child-c", "child-d", "parent", "solo"],
+);
+assert.deepEqual([...parseReviewedThreadIds('["child-c","solo"]')], ["child-c", "solo"]);
+assert.deepEqual([...parseReviewedThreadIds("[")], []);
+assert.deepEqual([...parseReviewedThreadIds('{"id":"child-c"}')], []);
+assert.equal(serializeReviewedThreadIds(new Set(["solo", "child-c"])), '["child-c","solo"]');
 
 assert.deepEqual(reviewStateForParentGroup(parentGroup, reviewedThreadIds), {
   parentId: "parent",

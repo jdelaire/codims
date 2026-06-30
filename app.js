@@ -2,19 +2,23 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import {
   buildProjectParentGroups,
+  buildReviewItems,
   childVisualLayout,
   densityScale,
+  filterReviewItems,
   filterVisibleProjectGroups,
   handoffShouldAnimate,
   matchesThreadSearch,
   normalizePreferences,
   parentGroupOffset,
+  parseReviewedThreadIds,
   privacyLabel,
   privacyPath,
   projectDisplayText,
   projectRoomGridSpacing,
   projectRoomLayout,
   roomCameraFocus,
+  serializeReviewedThreadIds,
   shouldPollThreads,
   threadActivityLabel,
 } from "./visual-model.mjs";
@@ -36,6 +40,9 @@ const dom = {
   labelsToggle: document.querySelector("#labelsToggle"),
   privacyToggle: document.querySelector("#privacyToggle"),
   inactiveToggle: document.querySelector("#inactiveToggle"),
+  reviewCount: document.querySelector("#reviewCount"),
+  reviewUnreviewedToggle: document.querySelector("#reviewUnreviewedToggle"),
+  reviewList: document.querySelector("#reviewList"),
   detailsEmpty: document.querySelector("#detailsEmpty"),
   detailsContent: document.querySelector("#detailsContent"),
   detailNickname: document.querySelector("#detailNickname"),
@@ -73,12 +80,29 @@ const parentPalette = [
 ];
 
 const PREFS_KEY = "codims.preferences.v1";
+const REVIEWED_THREADS_KEY = "codims.reviewedThreads.v1";
 
 function loadPreferences() {
   try {
     return normalizePreferences(JSON.parse(localStorage.getItem(PREFS_KEY) || "{}"));
   } catch {
     return normalizePreferences({});
+  }
+}
+
+function loadReviewedThreadIds() {
+  try {
+    return parseReviewedThreadIds(localStorage.getItem(REVIEWED_THREADS_KEY));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveReviewedThreadIds() {
+  try {
+    localStorage.setItem(REVIEWED_THREADS_KEY, serializeReviewedThreadIds(state.reviewedThreadIds));
+  } catch {
+    // Review state is browser-local convenience; UI should keep working without storage.
   }
 }
 
@@ -89,6 +113,9 @@ const state = {
   showInactive: false,
   density: "normal",
   search: "",
+  unreviewedOnly: false,
+  reviewedThreadIds: loadReviewedThreadIds(),
+  reviewItems: [],
   selectedMode: null,
   selectedDigest: null,
   selectedId: null,
@@ -1027,6 +1054,80 @@ function updateCounters(projectGroups) {
   dom.emptyState.hidden = visibleThreads !== 0;
 }
 
+function currentReviewItems() {
+  state.reviewItems = state.reviewItems.map((item) => ({
+    ...item,
+    reviewed: state.reviewedThreadIds.has(item.id),
+  }));
+  return state.reviewItems;
+}
+
+function renderReviewLane() {
+  const items = currentReviewItems();
+  const total = items.length;
+  const reviewed = items.filter((item) => item.reviewed).length;
+  const unreviewed = total - reviewed;
+  const visibleItems = filterReviewItems(items, state.unreviewedOnly);
+
+  dom.reviewCount.textContent = `${unreviewed} unreviewed / ${total} done`;
+  dom.reviewUnreviewedToggle.setAttribute("aria-pressed", String(state.unreviewedOnly));
+  dom.reviewList.replaceChildren();
+
+  if (!visibleItems.length) {
+    const empty = document.createElement("p");
+    empty.className = "review-empty";
+    empty.textContent = state.unreviewedOnly ? "No unreviewed done items." : "No done items.";
+    dom.reviewList.appendChild(empty);
+    return;
+  }
+
+  for (const item of visibleItems) {
+    const row = document.createElement("div");
+    row.className = "review-item";
+
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.className = "review-item-main";
+    openButton.addEventListener("click", () => showDetails(digestDetailThread(item)));
+
+    const meta = document.createElement("span");
+    meta.className = "review-item-meta";
+    meta.textContent = state.privacy
+      ? "Hidden"
+      : `${item.nickname || "agent"} / ${formatAge(item.age_seconds || 0)}`;
+
+    const title = document.createElement("span");
+    title.className = "review-item-title";
+    title.textContent = privacyLabel(item.title || "(untitled)", state.privacy);
+
+    const snippet = document.createElement("span");
+    snippet.className = "review-item-snippet";
+    snippet.textContent = state.privacy ? "Hidden" : item.last_response_snippet || "No response captured";
+
+    openButton.replaceChildren(meta, title, snippet);
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "review-toggle";
+    toggle.textContent = item.reviewed ? "Reviewed" : "Review";
+    toggle.setAttribute("aria-pressed", String(item.reviewed));
+    toggle.addEventListener("click", () => toggleReviewedThread(item.id));
+
+    row.replaceChildren(openButton, toggle);
+    dom.reviewList.appendChild(row);
+  }
+}
+
+function toggleReviewedThread(threadId) {
+  if (state.reviewedThreadIds.has(threadId)) {
+    state.reviewedThreadIds.delete(threadId);
+  } else {
+    state.reviewedThreadIds.add(threadId);
+  }
+  saveReviewedThreadIds();
+  renderReviewLane();
+}
+
 function updateStatus(payload) {
   if (payload.error) {
     dom.statusText.textContent = `Codex app-server unavailable: ${payload.error}`;
@@ -1080,9 +1181,11 @@ async function refreshThreads() {
     state.threads = visibleThreads;
     const allProjectGroups = buildProjectParentGroups(visibleThreads);
     const projectGroups = filterVisibleProjectGroups(allProjectGroups, state.showInactive);
+    state.reviewItems = buildReviewItems(projectGroups, state.reviewedThreadIds);
     reconcileRooms(projectGroups);
     reconcileAgents(projectGroups);
     updateCounters(projectGroups);
+    renderReviewLane();
     updateStatus(payload);
     if (state.selectedMode === "digest" && state.selectedDigest?.key) {
       const selectedDigest = projectGroups
@@ -1557,6 +1660,12 @@ function updatePrivacySensitiveUi() {
     renderDetails(state.selectedThread);
   }
 
+  if (state.selectedDigest) {
+    renderDigestDetails(state.selectedDigest);
+  }
+
+  renderReviewLane();
+
   if (dom.sendConfirmDialog.open) {
     updateSendConfirmTarget(state.selectedThread);
   }
@@ -1699,6 +1808,10 @@ function bindEvents() {
   dom.labelsToggle.addEventListener("click", () => setLabels(!state.labels));
   dom.privacyToggle.addEventListener("click", () => setPrivacy(!state.privacy));
   dom.inactiveToggle.addEventListener("click", () => setShowInactive(!state.showInactive));
+  dom.reviewUnreviewedToggle.addEventListener("click", () => {
+    state.unreviewedOnly = !state.unreviewedOnly;
+    renderReviewLane();
+  });
   dom.threadMessageForm.addEventListener("submit", onThreadMessageSubmit);
   dom.threadMessagePreview.addEventListener("click", showSendConfirmation);
   dom.sendConfirmDialog.addEventListener("close", onSendConfirmClose);

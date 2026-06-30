@@ -66,6 +66,16 @@
       </section>
 
       <aside class="details-panel" aria-label="Thread details">
+        <section class="review-lane" aria-labelledby="reviewLaneTitle">
+          <div class="review-lane-header">
+            <div>
+              <h2 id="reviewLaneTitle">Review lane</h2>
+              <p id="reviewCount">0 unreviewed / 0 done</p>
+            </div>
+            <button id="reviewUnreviewedToggle" type="button" aria-pressed="false">Unreviewed only</button>
+          </div>
+          <div id="reviewList" class="review-list"></div>
+        </section>
         <div id="detailsEmpty" class="details-empty">
           Click a worker to inspect its thread.
         </div>
