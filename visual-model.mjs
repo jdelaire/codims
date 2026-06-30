@@ -52,6 +52,71 @@ export function filterVisibleProjectGroups(projectGroups, showInactive) {
     .filter((projectGroup) => projectGroup.parentGroups.length > 0);
 }
 
+export function buildReviewItems(projectGroups, reviewedThreadIds = new Set()) {
+  return allParentGroups(projectGroups).flatMap((parentGroup) =>
+    (parentGroup.digestItems || []).map((item) => ({
+      ...item,
+      project: item.project || parentGroup.project,
+      parentId: parentGroup.parentId,
+      parentKey: parentGroup.key,
+      parentTitle: parentGroup.title,
+      reviewed: reviewedThreadIds.has(item.id),
+    })),
+  );
+}
+
+export function reviewStateForParentGroup(parentGroup, reviewedThreadIds = new Set()) {
+  const digestItems = parentGroup.digestItems || [];
+  const reviewed = digestItems.filter((item) => reviewedThreadIds.has(item.id)).length;
+  const total = digestItems.length;
+  const unreviewed = total - reviewed;
+  return {
+    parentId: parentGroup.parentId,
+    parentKey: parentGroup.key,
+    project: parentGroup.project,
+    title: parentGroup.title,
+    total,
+    reviewed,
+    unreviewed,
+    needsReview: unreviewed > 0,
+  };
+}
+
+export function buildActionInbox(projectGroups, reviewedThreadIds = new Set(), options = {}) {
+  const parentGroups = allParentGroups(projectGroups);
+  const reviewItems = buildReviewItems(projectGroups, reviewedThreadIds);
+  const parentStates = parentGroups.map((parentGroup) =>
+    reviewStateForParentGroup(parentGroup, reviewedThreadIds),
+  );
+  const staleBeforeMs = Number(options.staleBeforeMs);
+  const canMarkStale = Number.isFinite(staleBeforeMs);
+  const runningItems = parentGroups
+    .filter((parentGroup) => parentGroup.isActive)
+    .map((parentGroup) => parentGroupInboxItem(parentGroup, "running"));
+  const staleItems = parentGroups
+    .filter(
+      (parentGroup) =>
+        canMarkStale && !parentGroup.isActive && (parentGroup.latestUpdated || 0) < staleBeforeMs,
+    )
+    .map((parentGroup) => parentGroupInboxItem(parentGroup, "stale"));
+  const reviewActionItems = reviewItems.map((item) => ({
+    ...item,
+    type: item.reviewed ? "reviewed" : "needs_review",
+  }));
+
+  return {
+    reviewItems,
+    parentStates,
+    items: [...reviewActionItems, ...runningItems, ...staleItems],
+    counts: {
+      needs_review: reviewActionItems.filter((item) => item.type === "needs_review").length,
+      running: runningItems.length,
+      stale: staleItems.length,
+      reviewed: reviewActionItems.filter((item) => item.type === "reviewed").length,
+    },
+  };
+}
+
 export function childHandoffOffset(index, total) {
   const { x, z } = childVisualLayout(index, total);
   return { x, z };
@@ -272,6 +337,22 @@ function buildParentGroups(project, threads) {
       }
       return left.title.localeCompare(right.title);
     });
+}
+
+function allParentGroups(projectGroups) {
+  return (projectGroups || []).flatMap((projectGroup) => projectGroup.parentGroups || []);
+}
+
+function parentGroupInboxItem(parentGroup, type) {
+  return {
+    type,
+    parentId: parentGroup.parentId,
+    parentKey: parentGroup.key,
+    project: parentGroup.project,
+    title: parentGroup.title,
+    latestUpdated: parentGroup.latestUpdated,
+    isActive: parentGroup.isActive,
+  };
 }
 
 function ringCapacity(ring) {

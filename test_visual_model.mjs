@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 
 import {
+  buildActionInbox,
   buildProjectParentGroups,
+  buildReviewItems,
   childHandoffOffset,
   childVisualLayout,
   densityScale,
@@ -15,6 +17,7 @@ import {
   projectRoomLayout,
   projectRoomGridSpacing,
   projectDisplayText,
+  reviewStateForParentGroup,
   roomCameraFocus,
   shouldPollThreads,
   threadActivityLabel,
@@ -194,6 +197,100 @@ assert.equal(soloGroup.latestFinishedAt, 1000);
 assert.deepEqual(
   soloGroup.digestItems.map((thread) => thread.id),
   ["solo"],
+);
+
+const reviewedThreadIds = new Set(["child-c", "solo"]);
+const reviewItems = buildReviewItems(projectGroups, reviewedThreadIds);
+assert.deepEqual(
+  reviewItems.map((item) => ({
+    id: item.id,
+    parentId: item.parentId,
+    parentTitle: item.parentTitle,
+    project: item.project,
+    reviewed: item.reviewed,
+  })),
+  [
+    {
+      id: "child-c",
+      parentId: "parent",
+      parentTitle: "Ship Codims",
+      project: "codims",
+      reviewed: true,
+    },
+    {
+      id: "child-d",
+      parentId: "parent",
+      parentTitle: "Ship Codims",
+      project: "codims",
+      reviewed: false,
+    },
+    {
+      id: "parent",
+      parentId: "parent",
+      parentTitle: "Ship Codims",
+      project: "codims",
+      reviewed: false,
+    },
+    {
+      id: "solo",
+      parentId: "solo",
+      parentTitle: "Separate task",
+      project: "codims",
+      reviewed: true,
+    },
+  ],
+);
+assert.equal("reviewed" in parentGroup.digestItems[0], false);
+
+assert.deepEqual(reviewStateForParentGroup(parentGroup, reviewedThreadIds), {
+  parentId: "parent",
+  parentKey: "codims:parent",
+  project: "codims",
+  title: "Ship Codims",
+  total: 3,
+  reviewed: 1,
+  unreviewed: 2,
+  needsReview: true,
+});
+assert.deepEqual(reviewStateForParentGroup(soloGroup, reviewedThreadIds), {
+  parentId: "solo",
+  parentKey: "codims:solo",
+  project: "codims",
+  title: "Separate task",
+  total: 1,
+  reviewed: 1,
+  unreviewed: 0,
+  needsReview: false,
+});
+
+const actionInbox = buildActionInbox(projectGroups, reviewedThreadIds, { staleBeforeMs: 8000 });
+assert.deepEqual(actionInbox.counts, {
+  needs_review: 2,
+  running: 1,
+  stale: 1,
+  reviewed: 2,
+});
+assert.deepEqual(
+  actionInbox.items.filter((item) => item.type === "needs_review").map((item) => item.id),
+  ["child-d", "parent"],
+);
+assert.deepEqual(
+  actionInbox.items.filter((item) => item.type === "reviewed").map((item) => item.id),
+  ["child-c", "solo"],
+);
+assert.deepEqual(
+  actionInbox.items.filter((item) => item.type === "running").map((item) => item.parentId),
+  ["parent"],
+);
+assert.deepEqual(
+  actionInbox.items.filter((item) => item.type === "stale").map((item) => item.parentId),
+  ["solo"],
+);
+assert.deepEqual(
+  buildActionInbox(projectGroups, reviewedThreadIds, { staleBeforeMs: 500 }).items.filter(
+    (item) => item.type === "stale",
+  ),
+  [],
 );
 
 const digestThreads = [
