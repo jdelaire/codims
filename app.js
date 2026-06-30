@@ -112,6 +112,9 @@ const focusStudio = {
   reviewed: 0x64748b,
   room: {
     floor: 0x101827,
+    insetFloor: 0x182235,
+    wallPanel: 0x172033,
+    accentShadow: 0x06111f,
     backWall: 0x121a29,
     sideWall: 0x0b1220,
     signBack: 0x07101d,
@@ -400,6 +403,20 @@ function createRoom(project) {
   floorGlow.position.y = 0.035;
   group.add(floorGlow);
 
+  const insetFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 0.05, 1),
+    new THREE.MeshStandardMaterial({
+      color: focusStudio.room.insetFloor,
+      roughness: 0.58,
+      metalness: 0.14,
+      emissive: projectAccent,
+      emissiveIntensity: 0.01,
+    }),
+  );
+  insetFloor.position.y = 0.11;
+  insetFloor.receiveShadow = true;
+  group.add(insetFloor);
+
   const border = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 0.18, 1)),
     new THREE.LineBasicMaterial({ color: projectAccent, transparent: true, opacity: focusStudio.room.borderOpacity }),
@@ -444,6 +461,41 @@ function createRoom(project) {
   sideWall.position.set(-4.55, 1.05, 0);
   sideWall.receiveShadow = true;
   group.add(sideWall);
+
+  const wallPanels = [];
+  const wallPanelMaterial = new THREE.MeshStandardMaterial({
+    color: focusStudio.room.wallPanel,
+    roughness: 0.74,
+    metalness: 0.08,
+    emissive: projectAccent,
+    emissiveIntensity: 0.012,
+  });
+  for (let index = 0; index < 4; index += 1) {
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(1, 1.58, 0.035), wallPanelMaterial);
+    panel.receiveShadow = true;
+    group.add(panel);
+    wallPanels.push(panel);
+  }
+
+  const backLightRail = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 0.045, 0.04),
+    new THREE.MeshBasicMaterial({
+      color: projectAccent,
+      transparent: true,
+      opacity: 0.28,
+    }),
+  );
+  group.add(backLightRail);
+
+  const sideLightRail = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, 0.045, 1),
+    new THREE.MeshBasicMaterial({
+      color: projectAccent,
+      transparent: true,
+      opacity: 0.18,
+    }),
+  );
+  group.add(sideLightRail);
 
   const signTexture = createProjectDisplayTexture(project, 0, state.privacy);
   const signBack = new THREE.Mesh(
@@ -499,16 +551,20 @@ function createRoom(project) {
   group.userData.parts = {
     floor,
     floorGlow,
+    insetFloor,
     border,
     frontRail,
     backWall,
     sideWall,
+    wallPanels,
+    backLightRail,
+    sideLightRail,
     signBack,
     signFace,
     struts,
     linkRail,
   };
-  group.userData.pickables = [floor, floorGlow, frontRail, backWall, sideWall, signBack, signFace];
+  group.userData.pickables = [floor, insetFloor, floorGlow, frontRail, backWall, sideWall, signBack, signFace];
   for (const pickable of group.userData.pickables) {
     pickable.userData.room = group;
     pickable.userData.project = project;
@@ -531,6 +587,7 @@ function updateRoomSize(room, layout) {
   const parts = room.userData.parts;
   parts.floor.scale.set(width, 1, depth);
   parts.floorGlow.scale.set(width * 0.92, depth * 0.9, 1);
+  parts.insetFloor.scale.set(width * 0.82, 1, depth * 0.68);
   parts.border.scale.set(width + 0.05, 1, depth + 0.05);
   parts.frontRail.scale.set(width - 0.34, 1, 1);
   parts.frontRail.position.set(0, 0.13, depth / 2 - 0.08);
@@ -538,6 +595,15 @@ function updateRoomSize(room, layout) {
   parts.backWall.position.set(0, 1.05, -depth / 2 + 0.07);
   parts.sideWall.scale.set(1, 1, depth);
   parts.sideWall.position.set(-width / 2 + 0.07, 1.05, 0);
+  for (const [index, panel] of parts.wallPanels.entries()) {
+    const x = (((index + 1) / (parts.wallPanels.length + 1)) - 0.5) * width * 0.72;
+    panel.position.set(x, 1.1, -depth / 2 + 0.16);
+    panel.scale.set(Math.max(0.9, width / 9.2), 1, 1);
+  }
+  parts.backLightRail.scale.set(width - 1.1, 1, 1);
+  parts.backLightRail.position.set(0, 2.03, -depth / 2 + 0.18);
+  parts.sideLightRail.scale.set(1, 1, depth - 0.9);
+  parts.sideLightRail.position.set(-width / 2 + 0.16, 2.02, 0.12);
 
   const signZ = -depth / 2 + 0.54;
   parts.signBack.position.set(0, PROJECT_SIGN_Y, signZ);
