@@ -585,16 +585,16 @@ function visibleActivityLabel(text, isRunning) {
 
 function agentGlowForState(thread) {
   if (thread.state === "ACTIVE") {
-    return { color: 0x34d399, opacity: 0.58 };
+    return { color: focusStudio.active, opacity: 0.5 };
   }
   if (thread.state === "DONE") {
-    return { color: 0xf59e0b, opacity: 0.28 };
+    return { color: focusStudio.done, opacity: 0.18 };
   }
-  return { color: 0x475569, opacity: 0.18 };
+  return { color: 0x475569, opacity: 0.08 };
 }
 
 function agentBodyColor(thread, parentColorHex) {
-  return thread.state === "DONE" ? 0xb45309 : parentColorHex;
+  return thread.state === "DONE" ? 0x92400e : parentColorHex;
 }
 
 function agentLabelBorderColor(thread, parentCssColor) {
@@ -608,21 +608,21 @@ function createParentAgent(parentGroup) {
   const color = parentGroupColor(parentGroup);
   const bodyMaterial = new THREE.MeshStandardMaterial({
     color,
-    roughness: 0.36,
-    metalness: 0.22,
+    roughness: 0.48,
+    metalness: 0.12,
     emissive: 0x000000,
   });
   const headMaterial = new THREE.MeshStandardMaterial({
     color: 0xf8fafc,
-    roughness: 0.38,
-    metalness: 0.04,
-    emissive: 0xbfdcff,
-    emissiveIntensity: 0.04,
+    roughness: 0.5,
+    metalness: 0.02,
+    emissive: 0x9cc8ee,
+    emissiveIntensity: 0.025,
   });
   const glowMaterial = new THREE.MeshBasicMaterial({
-    color: parentGroup.isActive ? 0x34d399 : color,
+    color: parentGroup.isActive ? focusStudio.active : color,
     transparent: true,
-    opacity: parentGroup.isActive ? 0.72 : 0.24,
+    opacity: parentGroup.isActive ? 0.56 : 0.16,
   });
 
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1.18, 32), bodyMaterial);
@@ -655,13 +655,13 @@ function createAgent(thread) {
 
   const color = parentColor(thread);
   const glow = agentGlowForState(thread);
-  const bodyMaterial = new THREE.MeshStandardMaterial({ color, roughness: 0.42, metalness: 0.12 });
+  const bodyMaterial = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.08 });
   const headMaterial = new THREE.MeshStandardMaterial({
     color: 0xf1f5f9,
-    roughness: 0.42,
-    metalness: 0.03,
-    emissive: 0xcbd5e1,
-    emissiveIntensity: 0.025,
+    roughness: 0.52,
+    metalness: 0.02,
+    emissive: 0x9ca3af,
+    emissiveIntensity: 0.015,
   });
   const glowMaterial = new THREE.MeshBasicMaterial({
     color: glow.color,
@@ -704,22 +704,22 @@ function createDigestObject(parentGroup) {
 
   const baseMaterial = new THREE.MeshStandardMaterial({
     color: 0x92400e,
-    roughness: 0.46,
-    metalness: 0.18,
+    roughness: 0.58,
+    metalness: 0.1,
     emissive: 0x451a03,
-    emissiveIntensity: 0.18,
+    emissiveIntensity: 0.1,
   });
   const tokenMaterial = new THREE.MeshStandardMaterial({
     color: 0xf59e0b,
-    roughness: 0.32,
-    metalness: 0.36,
-    emissive: 0xf59e0b,
-    emissiveIntensity: 0.18,
+    roughness: 0.42,
+    metalness: 0.18,
+    emissive: focusStudio.digest,
+    emissiveIntensity: 0.14,
   });
   const ringMaterial = new THREE.MeshBasicMaterial({
     color: 0xfbbf24,
     transparent: true,
-    opacity: 0.42,
+    opacity: 0.34,
   });
 
   const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.42, 0.18, 28), baseMaterial);
@@ -749,14 +749,14 @@ function updateDigestObjectReviewState(digestObject, reviewState) {
   digestObject.userData.doneObjectInactive = inactive;
   digestObject.userData.remainingReviewCount = reviewState.unreviewed;
 
-  parts.baseMaterial.color.setHex(inactive ? 0x334155 : 0x92400e);
+  parts.baseMaterial.color.setHex(inactive ? 0x1f2937 : 0x78350f);
   parts.baseMaterial.emissive.setHex(inactive ? 0x000000 : 0x451a03);
-  parts.baseMaterial.emissiveIntensity = inactive ? 0 : 0.18;
-  parts.tokenMaterial.color.setHex(inactive ? 0x64748b : 0xf59e0b);
-  parts.tokenMaterial.emissive.setHex(inactive ? 0x000000 : 0xf59e0b);
-  parts.tokenMaterial.emissiveIntensity = inactive ? 0 : 0.18;
+  parts.baseMaterial.emissiveIntensity = inactive ? 0 : 0.1;
+  parts.tokenMaterial.color.setHex(inactive ? focusStudio.reviewed : focusStudio.digest);
+  parts.tokenMaterial.emissive.setHex(inactive ? 0x000000 : focusStudio.digest);
+  parts.tokenMaterial.emissiveIntensity = inactive ? 0 : 0.14;
   parts.ringMaterial.color.setHex(inactive ? 0x94a3b8 : 0xfbbf24);
-  parts.ringMaterial.opacity = inactive ? 0.14 : 0.42;
+  parts.ringMaterial.opacity = inactive ? 0.1 : 0.34;
 }
 
 function updateDigestPickables(digestObject, parentGroup, room) {
@@ -791,7 +791,7 @@ function createHandoff() {
   const lineMaterial = new THREE.LineBasicMaterial({
     color: 0x38bdf8,
     transparent: true,
-    opacity: 0.34,
+    opacity: 0.08,
     depthTest: false,
   });
   const line = new THREE.Line(geometry, lineMaterial);
@@ -799,7 +799,7 @@ function createHandoff() {
   const packetMaterial = new THREE.MeshBasicMaterial({
     color: 0x38bdf8,
     transparent: true,
-    opacity: 0.9,
+    opacity: 0.82,
     depthTest: false,
   });
   const packet = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), packetMaterial);
@@ -807,7 +807,7 @@ function createHandoff() {
   const beamMaterial = new THREE.MeshBasicMaterial({
     color: 0x38bdf8,
     transparent: true,
-    opacity: 0.24,
+    opacity: 0.16,
     depthTest: false,
   });
   const beam = new THREE.Mesh(curveTubeGeometry(curve, 0.024), beamMaterial);
@@ -827,9 +827,9 @@ function updateHandoffGeometry(handoff, start, end, color, active) {
   parts.beam.geometry.dispose();
   parts.beam.geometry = curveTubeGeometry(curve, active ? 0.034 : 0.018);
   parts.lineMaterial.color.setHex(color);
-  parts.lineMaterial.opacity = active ? 0.9 : 0.18;
+  parts.lineMaterial.opacity = active ? 0.68 : 0.05;
   parts.beamMaterial.color.setHex(color);
-  parts.beamMaterial.opacity = active ? 0.34 : 0.07;
+  parts.beamMaterial.opacity = active ? 0.2 : 0.03;
   parts.packetMaterial.color.setHex(color);
   parts.packet.visible = active;
   parts.beam.visible = active;
@@ -984,9 +984,9 @@ function reconcileAgents(projectGroups) {
       const parentColorHex = parentGroupColor(parentGroup);
       parentParts.bodyMaterial.color.setHex(parentColorHex);
       parentParts.bodyMaterial.emissive.setHex(parentGroup.isActive ? parentColorHex : 0x000000);
-      parentParts.bodyMaterial.emissiveIntensity = parentGroup.isActive ? 0.15 : 0;
-      parentParts.glowMaterial.color.setHex(parentGroup.isActive ? 0x34d399 : parentColorHex);
-      parentParts.glowMaterial.opacity = parentGroup.isActive ? 0.72 : 0.24;
+      parentParts.bodyMaterial.emissiveIntensity = parentGroup.isActive ? 0.1 : 0;
+      parentParts.glowMaterial.color.setHex(parentGroup.isActive ? focusStudio.active : parentColorHex);
+      parentParts.glowMaterial.opacity = parentGroup.isActive ? 0.56 : 0.16;
       parentParts.body.userData.threadId = parentGroup.lead.id;
       parentParts.body.userData.thread = parentGroup.lead;
       parentParts.body.userData.parentGroup = parentGroup;
@@ -1859,9 +1859,9 @@ function animateAgents(elapsed) {
     const parentGroup = parentAgent.userData.parentGroup;
     const parts = parentAgent.userData.parts;
     const speed = parentGroup?.isActive ? 2.6 : 0.8;
-    parentAgent.position.y = Math.sin(elapsed * speed + hashString(parentGroup?.parentId || "")) * (parentGroup?.isActive ? 0.06 : 0.015);
-    parts.head.rotation.z = Math.sin(elapsed * speed) * (parentGroup?.isActive ? 0.05 : 0.018);
-    parts.ring.scale.setScalar(1 + Math.sin(elapsed * speed) * (parentGroup?.isActive ? 0.1 : 0.025));
+    parentAgent.position.y = Math.sin(elapsed * speed + hashString(parentGroup?.parentId || "")) * (parentGroup?.isActive ? 0.05 : 0.008);
+    parts.head.rotation.z = Math.sin(elapsed * speed) * (parentGroup?.isActive ? 0.04 : 0.01);
+    parts.ring.scale.setScalar(1 + Math.sin(elapsed * speed) * (parentGroup?.isActive ? 0.08 : 0.012));
     parts.halo.rotation.z = elapsed * (parentGroup?.isActive ? 0.7 : 0.18);
   }
 
@@ -1891,8 +1891,8 @@ function animateAgents(elapsed) {
       parts.head.rotation.z = 0;
       parts.ring.scale.setScalar(1);
     } else {
-      agent.position.y = Math.sin(elapsed * 1.2 + hashString(thread.id)) * 0.018;
-      parts.head.rotation.z = Math.sin(elapsed * 0.8) * 0.025;
+      agent.position.y = Math.sin(elapsed * 1.2 + hashString(thread.id)) * 0.008;
+      parts.head.rotation.z = Math.sin(elapsed * 0.8) * 0.012;
       parts.ring.scale.setScalar(1);
     }
   }
