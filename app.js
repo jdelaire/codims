@@ -6,6 +6,7 @@ import {
   filterVisibleProjectGroups,
   handoffShouldAnimate,
   matchesThreadSearch,
+  normalizePreferences,
   parentGroupOffset,
   privacyLabel,
   privacyPath,
@@ -67,11 +68,22 @@ const parentPalette = [
   0x38bdf8,
 ];
 
+const PREFS_KEY = "codims.preferences.v1";
+
+function loadPreferences() {
+  try {
+    return normalizePreferences(JSON.parse(localStorage.getItem(PREFS_KEY) || "{}"));
+  } catch {
+    return normalizePreferences({});
+  }
+}
+
 const state = {
   live: true,
   labels: true,
   privacy: false,
   showInactive: false,
+  density: "normal",
   search: "",
   selectedId: null,
   selectedThread: null,
@@ -90,6 +102,20 @@ const state = {
   selectable: [],
   refreshSeq: 0,
 };
+
+function savePreferences() {
+  localStorage.setItem(
+    PREFS_KEY,
+    JSON.stringify({
+      activeMinutes: dom.activeMinutes.value,
+      maxAgeHours: dom.maxAgeHours.value,
+      labels: state.labels,
+      showInactive: state.showInactive,
+      privacy: state.privacy,
+      density: state.density,
+    }),
+  );
+}
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050711);
@@ -1182,6 +1208,7 @@ function setLabels(nextLabels) {
   state.labels = nextLabels;
   dom.labelsToggle.setAttribute("aria-pressed", String(nextLabels));
   dom.labels.classList.toggle("is-hidden", !nextLabels);
+  savePreferences();
 }
 
 function updatePrivacySensitiveUi() {
@@ -1216,19 +1243,25 @@ function updatePrivacySensitiveUi() {
   }
 }
 
-function setPrivacy(nextPrivacy) {
+function setPrivacy(nextPrivacy, { refresh = true } = {}) {
   state.privacy = nextPrivacy;
   dom.privacyToggle.setAttribute("aria-pressed", String(nextPrivacy));
   dom.privacyToggle.textContent = nextPrivacy ? "Privacy on" : "Privacy";
+  savePreferences();
   updatePrivacySensitiveUi();
-  refreshThreads();
+  if (refresh) {
+    refreshThreads();
+  }
 }
 
-function setShowInactive(nextShowInactive) {
+function setShowInactive(nextShowInactive, { refresh = true } = {}) {
   state.showInactive = nextShowInactive;
   dom.inactiveToggle.textContent = nextShowInactive ? "Hide idle" : "Show idle";
   dom.inactiveToggle.setAttribute("aria-pressed", String(nextShowInactive));
-  refreshThreads();
+  savePreferences();
+  if (refresh) {
+    refreshThreads();
+  }
 }
 
 async function onThreadMessageSubmit(event) {
@@ -1325,10 +1358,17 @@ function bindEvents() {
   renderer.domElement.addEventListener("pointerdown", onPointerDown);
   dom.controls.addEventListener("submit", (event) => {
     event.preventDefault();
+    savePreferences();
     refreshThreads();
   });
-  dom.activeMinutes.addEventListener("change", refreshThreads);
-  dom.maxAgeHours.addEventListener("change", refreshThreads);
+  dom.activeMinutes.addEventListener("change", () => {
+    savePreferences();
+    refreshThreads();
+  });
+  dom.maxAgeHours.addEventListener("change", () => {
+    savePreferences();
+    refreshThreads();
+  });
   dom.threadSearch.addEventListener("input", () => {
     state.search = dom.threadSearch.value;
     refreshThreads();
@@ -1352,8 +1392,13 @@ function startPolling() {
 
 resize();
 bindEvents();
+const prefs = loadPreferences();
+dom.activeMinutes.value = prefs.activeMinutes;
+dom.maxAgeHours.value = prefs.maxAgeHours;
+state.density = prefs.density;
+setLabels(prefs.labels);
+setShowInactive(prefs.showInactive, { refresh: false });
+setPrivacy(prefs.privacy, { refresh: false });
 setLive(true);
-setLabels(true);
-setShowInactive(false);
 startPolling();
 animate();
