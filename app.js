@@ -997,9 +997,9 @@ function reconcileRooms(projectGroups) {
     room.position.copy(roomPosition(index, projectGroups.length, roomSpacing.gapX, roomSpacing.gapZ));
     room.userData.layout = layout;
     updateRoomSize(room, layout);
-    const label = state.roomLabels.get(project);
-    label.textContent = projectDisplayText(privacyLabel(project, state.privacy), threads.length);
-    label.dataset.project = project;
+    const roomLabel = state.roomLabels.get(project);
+    roomLabel.textContent = projectDisplayText(privacyLabel(project, state.privacy), threads.length);
+    roomLabel.dataset.project = project;
     const display = room.userData.projectDisplay;
     if (
       display &&
@@ -2014,6 +2014,17 @@ function updateLabels() {
     label.style.left = `${(vector.x * 0.5 + 0.5) * width}px`;
     label.style.top = `${(-vector.y * 0.5 + 0.5) * height}px`;
   }
+
+  for (const [project, label] of state.roomLabels.entries()) {
+    const signFace = state.rooms.get(project)?.userData.parts?.signFace;
+    if (!signFace) {
+      continue;
+    }
+    signFace.getWorldPosition(vector);
+    vector.project(camera);
+    label.style.left = `${(vector.x * 0.5 + 0.5) * width}px`;
+    label.style.top = `${(-vector.y * 0.5 + 0.5) * height}px`;
+  }
 }
 
 function animateAgents(elapsed) {
@@ -2142,9 +2153,9 @@ function updatePrivacySensitiveUi() {
     if (display) {
       updateProjectDisplayTexture(display.texture, display.project, display.count, state.privacy);
       display.privacy = state.privacy;
-      const label = state.roomLabels.get(display.project);
-      if (label) {
-        label.textContent = projectDisplayText(
+      const roomLabel = state.roomLabels.get(display.project);
+      if (roomLabel) {
+        roomLabel.textContent = projectDisplayText(
           privacyLabel(display.project, state.privacy),
           display.count,
         );
