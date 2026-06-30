@@ -1610,6 +1610,7 @@ function showRoomFocus(room) {
   dom.detailsEmpty.hidden = false;
   dom.detailsContent.hidden = true;
   updateMessageComposer(null);
+  updateAgentLabelVisibility();
   updateSceneVisualStates();
 }
 

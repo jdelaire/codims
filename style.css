@@ -380,6 +380,12 @@ h1::before {
   opacity: 1;
 }
 
+.agent-label.is-active.is-selected,
+.parent-label.is-active.is-selected {
+  animation: none;
+  box-shadow: 0 0 0 1px rgba(224, 242, 254, 0.16) inset, 0 0 18px rgba(125, 211, 252, 0.18), 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
 .empty-state {
   position: absolute;
   left: 50%;
