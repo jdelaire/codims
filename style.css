@@ -201,6 +201,7 @@ h1::before {
 }
 
 .agent-label,
+.digest-label,
 .parent-label,
 .room-label {
   position: absolute;
@@ -254,6 +255,24 @@ h1::before {
   color: #dcfce7;
   border-color: rgba(52, 211, 153, 0.55);
   box-shadow: 0 0 18px rgba(52, 211, 153, 0.22), 0 10px 26px rgba(0, 0, 0, 0.3);
+}
+
+.agent-label.is-done {
+  color: #fef3c7;
+  border-color: rgba(245, 158, 11, 0.58);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.18), 0 10px 26px rgba(0, 0, 0, 0.3);
+}
+
+.digest-label {
+  z-index: 5;
+  color: #fef3c7;
+  border-color: rgba(251, 191, 36, 0.72);
+  background: linear-gradient(180deg, rgba(69, 26, 3, 0.9), rgba(24, 13, 5, 0.86));
+  font-size: 11px;
+  font-weight: 760;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.22), 0 10px 26px rgba(0, 0, 0, 0.32);
 }
 
 .parent-label.is-active {
