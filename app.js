@@ -1908,7 +1908,7 @@ function animateAgents(elapsed) {
     const pulse = 1 + Math.sin(elapsed * 1.7 + hashString(digestObject.userData.digestKey || "")) * 0.035;
     parts.token.rotation.y = elapsed * 0.28;
     parts.ring.scale.setScalar(pulse);
-    parts.ringMaterial.opacity = 0.34 + (pulse - 1) * 1.2;
+    parts.ringMaterial.opacity = 0.34;
   }
 }
 
