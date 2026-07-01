@@ -376,6 +376,45 @@ p {
   box-shadow: 0 0 0 1px rgba(224, 242, 254, 0.16) inset, 0 0 18px rgba(125, 211, 252, 0.18), 0 10px 24px rgba(0, 0, 0, 0.3);
 }
 
+.inbox-drawer,
+.inspector-overlay {
+  position: absolute;
+  z-index: 30;
+  border: 1px solid rgba(172, 188, 209, 0.2);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(5, 8, 14, 0.96)),
+    var(--bg);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.36), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  backdrop-filter: blur(18px);
+}
+
+.inbox-drawer[hidden],
+.inspector-overlay[hidden] {
+  display: none;
+}
+
+.inbox-drawer {
+  right: 14px;
+  top: 58px;
+  width: min(620px, calc(100vw - 28px));
+  max-height: calc(100vh - 86px);
+  overflow: auto;
+  padding: 16px;
+}
+
+.overlay-close {
+  border: 1px solid rgba(172, 188, 209, 0.2);
+  border-radius: 6px;
+  background: rgba(8, 12, 22, 0.72);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 8px;
+}
+
 .details-panel {
   min-width: 0;
   overflow: auto;
@@ -407,14 +446,6 @@ p {
   gap: 10px;
 }
 
-.review-lane-actions {
-  display: flex;
-  flex: none;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: flex-end;
-}
-
 .review-lane h2 {
   font-size: 15px;
   line-height: 1.1;
@@ -427,9 +458,6 @@ p {
   line-height: 1.25;
 }
 
-#reviewUnreviewedToggle,
-#reviewPanelToggle,
-#reviewStaleToggle,
 .action-inbox-filters button,
 .review-toggle,
 .review-item-main {
@@ -439,33 +467,6 @@ p {
   color: var(--text);
   cursor: pointer;
   font: inherit;
-}
-
-#reviewUnreviewedToggle {
-  flex: none;
-  padding: 6px 8px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-#reviewPanelToggle,
-#reviewStaleToggle {
-  flex: none;
-  padding: 6px 8px;
-  color: #cffafe;
-  font-size: 12px;
-}
-
-#reviewUnreviewedToggle[aria-pressed="true"] {
-  color: #cffafe;
-  border-color: rgba(34, 211, 238, 0.62);
-  background: rgba(34, 211, 238, 0.12);
-}
-
-#reviewPanelToggle[aria-pressed="true"],
-#reviewStaleToggle[aria-pressed="true"] {
-  border-color: rgba(34, 211, 238, 0.62);
-  background: rgba(34, 211, 238, 0.12);
 }
 
 .action-inbox-filters {
@@ -512,12 +513,6 @@ p {
   gap: 7px;
 }
 
-.review-lane.is-expanded .review-list {
-  max-height: min(64vh, 720px);
-  overflow: auto;
-  padding-right: 3px;
-}
-
 .review-empty {
   color: var(--muted);
   font-size: 13px;
@@ -541,19 +536,13 @@ p {
 
 .review-item-main:hover,
 .action-inbox-filters button:hover,
-.review-toggle:hover,
-#reviewPanelToggle:hover,
-#reviewStaleToggle:hover,
-#reviewUnreviewedToggle:hover {
+.review-toggle:hover {
   border-color: rgba(34, 211, 238, 0.48);
 }
 
 .review-item-main:focus-visible,
 .action-inbox-filters button:focus-visible,
-.review-toggle:focus-visible,
-#reviewPanelToggle:focus-visible,
-#reviewStaleToggle:focus-visible,
-#reviewUnreviewedToggle:focus-visible {
+.review-toggle:focus-visible {
   outline: 2px solid rgba(34, 211, 238, 0.45);
   outline-offset: 2px;
 }

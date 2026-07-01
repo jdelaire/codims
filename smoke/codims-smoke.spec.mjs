@@ -216,7 +216,23 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
   await expect(page.locator("#projectCount")).toHaveText("1");
   await expect(page.locator("#inboxToggle")).toBeVisible();
   await expect(page.locator("#settingsToggle")).toBeVisible();
+  await expect(page.locator("#inboxBadge")).toHaveText("2");
+  await expect(page.locator("#inboxToggle")).toHaveAttribute("aria-label", "2 items need review");
+  await expect(page.locator("#inboxDrawer")).toBeHidden();
+  await page.locator("#inboxToggle").click();
+  await expect(page.locator("#inboxToggle")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#inboxDrawer")).toBeVisible();
   await expect(page.locator("#reviewList")).toContainText("Review sidebar");
+  await expect(page.locator("#reviewPanelToggle")).toHaveCount(0);
+  await expect(page.locator("#reviewStaleToggle")).toHaveCount(0);
+  await expect(page.locator("#reviewUnreviewedToggle")).toHaveCount(0);
+  await expect(
+    page.locator(".review-item").filter({ hasText: "Review sidebar" }).locator(".review-toggle"),
+  ).toHaveAttribute("aria-label", /Mark .* reviewed/);
+  await page.locator("#inboxClose").click();
+  await expect(page.locator("#inboxDrawer")).toBeHidden();
+  await expect(page.locator("#inboxToggle")).toHaveAttribute("aria-expanded", "false");
+  await page.locator("#inboxToggle").click();
   await page.locator(".review-item-main").filter({ hasText: "Review sidebar" }).click();
   await expect(page.locator("#detailTitle")).toContainText("Review sidebar");
   await expect(page.locator("#threadMessageForm")).toBeHidden();
@@ -229,9 +245,17 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
 });
 
 test("privacy mode hides sidebar content", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "codims.preferences.v1",
+      JSON.stringify({ prefsVersion: 2, maxAgeHours: "8", privacy: true, density: "normal" }),
+    );
+  });
   await page.goto(`${baseUrl}/index.html`);
-  await page.locator("#privacyToggle").click();
+  await page.locator("#inboxToggle").click();
   await expect(page.locator("#reviewList")).toContainText("Hidden");
+  await expect(page.locator(".review-toggle").first()).toHaveAttribute("aria-label", "Mark item reviewed");
+  await expect(page.locator(".review-toggle").first()).not.toHaveAttribute("aria-label", /Review sidebar/);
 });
 
 test("mobile layout keeps scene and details visible", async ({ page }) => {

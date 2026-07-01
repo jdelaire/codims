@@ -46,17 +46,14 @@ const dom = {
   inboxBadge: document.querySelector("#inboxBadge"),
   settingsToggle: document.querySelector("#settingsToggle"),
   inboxDrawer: document.querySelector("#inboxDrawer"),
+  inboxClose: document.querySelector("#inboxClose"),
   inspectorOverlay: document.querySelector("#inspectorOverlay"),
   settingsDialog: document.querySelector("#settingsDialog"),
   maxAgeHours: document.querySelector("#maxAgeHours"),
   densityMode: document.querySelector("#densityMode"),
   privacyToggle: document.querySelector("#privacyToggle"),
   inactiveToggle: document.querySelector("#inactiveToggle"),
-  reviewLane: document.querySelector(".review-lane"),
-  reviewPanelToggle: document.querySelector("#reviewPanelToggle"),
-  reviewStaleToggle: document.querySelector("#reviewStaleToggle"),
   reviewCount: document.querySelector("#reviewCount"),
-  reviewUnreviewedToggle: document.querySelector("#reviewUnreviewedToggle"),
   actionInboxButtons: [...document.querySelectorAll("[data-action-inbox-filter]")],
   actionInboxCounts: new Map(
     [...document.querySelectorAll("[data-action-inbox-count]")].map((element) => [
@@ -163,9 +160,7 @@ const state = {
   showInactive: false,
   density: "normal",
   search: "",
-  unreviewedOnly: false,
-  reviewPanelExpanded: false,
-  showStale: true,
+  inboxOpen: false,
   actionInboxFilter: null,
   actionInbox: buildActionInbox([]),
   reviewedThreadIds: loadReviewedThreadIds(),
@@ -210,8 +205,6 @@ function savePreferences() {
         showInactive: state.showInactive,
         privacy: state.privacy,
         density: state.density,
-        reviewPanelExpanded: state.reviewPanelExpanded,
-        showStale: state.showStale,
       }),
     );
   } catch {
@@ -1350,9 +1343,9 @@ function refreshActionInbox() {
 
 function visibleActionInboxItems(inbox) {
   return filterActionInboxItems(inbox, {
-    unreviewedOnly: state.unreviewedOnly,
+    unreviewedOnly: false,
     filter: state.actionInboxFilter,
-    showStale: state.showStale,
+    showStale: true,
   });
 }
 
@@ -1394,9 +1387,6 @@ function actionInboxItemMetaText(label, item) {
 }
 
 function actionInboxEmptyText() {
-  if (state.unreviewedOnly) {
-    return "No items need review.";
-  }
   if (state.actionInboxFilter) {
     return `No ${actionInboxTypeLabel(state.actionInboxFilter).toLowerCase()} items.`;
   }
@@ -1407,20 +1397,20 @@ function renderReviewLane() {
   const inbox = state.actionInbox || buildActionInbox([]);
   const counts = inbox.counts || {};
   const visibleItems = visibleActionInboxItems(inbox);
-  const badgeCount = (counts.needs_review || 0) + (counts.running || 0) + (counts.stale || 0);
 
-  dom.inboxBadge.textContent = String(badgeCount);
+  dom.inboxBadge.textContent = String(counts.needs_review || 0);
+  dom.inboxToggle.setAttribute(
+    "aria-label",
+    `${counts.needs_review || 0} items need review`,
+  );
   dom.reviewCount.textContent = `${counts.needs_review || 0} needs review / ${
     counts.running || 0
   } running / ${counts.stale || 0} stale / ${counts.reviewed || 0} reviewed`;
-  dom.reviewStaleToggle.textContent = state.showStale ? "Hide stale" : "Show stale";
-  dom.reviewStaleToggle.setAttribute("aria-pressed", String(state.showStale));
-  dom.reviewUnreviewedToggle.setAttribute("aria-pressed", String(state.unreviewedOnly));
   for (const button of dom.actionInboxButtons) {
     const type = button.dataset.actionInboxFilter;
     button.setAttribute(
       "aria-pressed",
-      String(!state.unreviewedOnly && state.actionInboxFilter === type),
+      String(state.actionInboxFilter === type),
     );
     const count = dom.actionInboxCounts.get(type);
     if (count) {
@@ -1465,9 +1455,14 @@ function renderReviewLane() {
 
     if (isReviewItem) {
       const toggle = document.createElement("button");
+      const reviewToggleTarget = state.privacy ? "item" : item.title || "item";
       toggle.type = "button";
       toggle.className = "review-toggle";
-      toggle.textContent = item.reviewed ? "Reviewed" : "Review";
+      toggle.textContent = item.reviewed ? "✓" : "";
+      toggle.setAttribute(
+        "aria-label",
+        item.reviewed ? `Mark ${reviewToggleTarget} unreviewed` : `Mark ${reviewToggleTarget} reviewed`,
+      );
       toggle.setAttribute("aria-pressed", String(item.reviewed));
       toggle.addEventListener("click", () => toggleReviewedThread(item.id));
       row.replaceChildren(openButton, toggle);
@@ -2311,27 +2306,10 @@ function setShowInactive(nextShowInactive, { refresh = true } = {}) {
   }
 }
 
-function setReviewPanelExpanded(nextExpanded, { persist = true } = {}) {
-  state.reviewPanelExpanded = nextExpanded;
-  dom.reviewPanelToggle.textContent = nextExpanded ? "Compact" : "Expand";
-  dom.reviewPanelToggle.setAttribute("aria-pressed", String(nextExpanded));
-  dom.reviewLane.classList.toggle("is-expanded", nextExpanded);
-  if (persist) {
-    savePreferences();
-  }
-  resize();
-}
-
-function setShowStale(nextShowStale, { persist = true, render = true } = {}) {
-  state.showStale = nextShowStale;
-  dom.reviewStaleToggle.textContent = nextShowStale ? "Hide stale" : "Show stale";
-  dom.reviewStaleToggle.setAttribute("aria-pressed", String(nextShowStale));
-  if (persist) {
-    savePreferences();
-  }
-  if (render) {
-    renderReviewLane();
-  }
+function setInboxOpen(nextOpen) {
+  state.inboxOpen = nextOpen;
+  dom.inboxDrawer.hidden = !nextOpen;
+  dom.inboxToggle.setAttribute("aria-expanded", String(nextOpen));
 }
 
 async function onThreadMessageSubmit(event) {
@@ -2439,19 +2417,11 @@ function bindEvents() {
   });
   dom.privacyToggle.addEventListener("click", () => setPrivacy(!state.privacy));
   dom.inactiveToggle.addEventListener("click", () => setShowInactive(!state.showInactive));
-  dom.reviewPanelToggle.addEventListener("click", () => setReviewPanelExpanded(!state.reviewPanelExpanded));
-  dom.reviewStaleToggle.addEventListener("click", () => setShowStale(!state.showStale));
-  dom.reviewUnreviewedToggle.addEventListener("click", () => {
-    state.unreviewedOnly = !state.unreviewedOnly;
-    if (state.unreviewedOnly) {
-      state.actionInboxFilter = null;
-    }
-    renderReviewLane();
-  });
+  dom.inboxToggle.addEventListener("click", () => setInboxOpen(!state.inboxOpen));
+  dom.inboxClose.addEventListener("click", () => setInboxOpen(false));
   for (const button of dom.actionInboxButtons) {
     button.addEventListener("click", () => {
       const filter = button.dataset.actionInboxFilter;
-      state.unreviewedOnly = false;
       state.actionInboxFilter = state.actionInboxFilter === filter ? null : filter;
       renderReviewLane();
     });
@@ -2476,8 +2446,6 @@ const prefs = loadPreferences();
 dom.maxAgeHours.value = prefs.maxAgeHours;
 state.density = prefs.density;
 dom.densityMode.value = prefs.density;
-setReviewPanelExpanded(prefs.reviewPanelExpanded, { persist: false });
-setShowStale(prefs.showStale, { persist: false, render: false });
 state.labels = true;
 state.live = true;
 dom.labels.classList.toggle("is-hidden", false);

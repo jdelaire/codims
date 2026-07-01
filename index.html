@@ -54,18 +54,14 @@
       </div>
 
       <!-- Temporary overlay containers follow; later tasks refine their contents. -->
-      <aside id="inboxDrawer" class="inbox-drawer" hidden>
+      <aside id="inboxDrawer" class="inbox-drawer" aria-label="Action inbox" hidden>
         <section class="review-lane" aria-labelledby="reviewLaneTitle">
           <div class="review-lane-header">
             <div>
               <h2 id="reviewLaneTitle">Action inbox</h2>
-              <p id="reviewCount">0 unreviewed / 0 done</p>
+              <p id="reviewCount">0 needs review / 0 running / 0 stale / 0 reviewed</p>
             </div>
-            <div class="review-lane-actions">
-              <button id="reviewPanelToggle" type="button" aria-pressed="false">Expand</button>
-              <button id="reviewStaleToggle" type="button" aria-pressed="true">Hide stale</button>
-              <button id="reviewUnreviewedToggle" type="button" aria-pressed="false">Unreviewed only</button>
-            </div>
+            <button id="inboxClose" class="overlay-close" type="button" aria-label="Close action inbox">Close</button>
           </div>
           <div class="action-inbox-filters" aria-label="Action inbox filters">
             <button type="button" data-action-inbox-filter="needs_review" aria-pressed="false">
