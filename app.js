@@ -5,6 +5,7 @@ import { disposeObject3D } from "./three-disposal.mjs";
 import {
   actionInboxFetchMaxAgeHours,
   actionInboxItemParentKey,
+  autoDensityMode,
   buildActionInbox,
   buildParentTimeline,
   buildProjectParentGroups,
@@ -50,8 +51,9 @@ const dom = {
   inspectorOverlay: document.querySelector("#inspectorOverlay"),
   inspectorClose: document.querySelector("#inspectorClose"),
   settingsDialog: document.querySelector("#settingsDialog"),
+  settingsForm: document.querySelector("#settingsForm"),
+  densityStatus: document.querySelector("#densityStatus"),
   maxAgeHours: document.querySelector("#maxAgeHours"),
-  densityMode: document.querySelector("#densityMode"),
   privacyToggle: document.querySelector("#privacyToggle"),
   inactiveToggle: document.querySelector("#inactiveToggle"),
   reviewCount: document.querySelector("#reviewCount"),
@@ -194,7 +196,6 @@ function savePreferences() {
         labels: state.labels,
         showInactive: state.showInactive,
         privacy: state.privacy,
-        density: state.density,
       }),
     );
   } catch {
@@ -1576,6 +1577,8 @@ function applyThreadsPayload(payload) {
   const allProjectGroups = buildProjectParentGroups(visibleThreads);
   const projectGroups = filterVisibleProjectGroups(allProjectGroups, state.showInactive);
   state.projectGroups = projectGroups;
+  state.density = autoDensityMode(state.projectGroups);
+  dom.densityStatus.textContent = `Density: Auto (${state.density})`;
   refreshActionInbox();
   reconcileRooms(projectGroups);
   reconcileAgents(projectGroups);
@@ -2255,12 +2258,12 @@ function bindEvents() {
   renderer.domElement.addEventListener("pointerdown", onPointerDown);
   renderer.domElement.addEventListener("pointerup", onPointerUp);
   renderer.domElement.addEventListener("pointercancel", onPointerCancel);
-  dom.maxAgeHours.addEventListener("change", () => {
-    savePreferences();
-    refreshThreads();
+  dom.settingsToggle.addEventListener("click", () => dom.settingsDialog.showModal());
+  dom.settingsForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    dom.settingsDialog.close();
   });
-  dom.densityMode.addEventListener("change", () => {
-    state.density = dom.densityMode.value === "compact" ? "compact" : "normal";
+  dom.maxAgeHours.addEventListener("change", () => {
     savePreferences();
     refreshThreads();
   });
@@ -2291,8 +2294,6 @@ resize();
 bindEvents();
 const prefs = loadPreferences();
 dom.maxAgeHours.value = prefs.maxAgeHours;
-state.density = prefs.density;
-dom.densityMode.value = prefs.density;
 state.labels = true;
 state.live = true;
 dom.labels.classList.toggle("is-hidden", false);

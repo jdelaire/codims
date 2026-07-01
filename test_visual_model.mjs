@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildActionInbox,
   actionInboxItemParentKey,
+  autoDensityMode,
   buildParentTimeline,
   buildProjectParentGroups,
   buildReviewItems,
@@ -190,21 +191,26 @@ assert.equal(privacyPath("/repo/app", true), "Hidden");
 assert.equal(densityScale("normal"), 1);
 assert.equal(densityScale("compact"), 0.78);
 assert.equal(densityScale("bad"), 1);
+assert.equal(autoDensityMode([]), "normal");
+assert.equal(autoDensityMode([{ threads: new Array(24).fill({}) }]), "normal");
+assert.equal(autoDensityMode([{ threads: new Array(25).fill({}) }]), "compact");
+assert.equal(
+  autoDensityMode(new Array(7).fill(null).map(() => ({ threads: [{}] }))),
+  "compact",
+);
 assert.deepEqual(normalizePreferences({ activeMinutes: "8", maxAgeHours: "24", labels: false }), {
   maxAgeHours: "24",
   labels: false,
   showInactive: false,
   privacy: false,
-  density: "normal",
   reviewPanelExpanded: false,
   showStale: true,
 });
-assert.deepEqual(normalizePreferences({ activeMinutes: "", maxAgeHours: "-1", density: "bad" }), {
+assert.deepEqual(normalizePreferences({ activeMinutes: "", maxAgeHours: "-1" }), {
   maxAgeHours: "8",
   labels: true,
   showInactive: false,
   privacy: false,
-  density: "normal",
   reviewPanelExpanded: false,
   showStale: true,
 });

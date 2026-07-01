@@ -63,6 +63,14 @@ export function shouldUseDenseLabels(projectGroups) {
   return renderedThreadCount > 48;
 }
 
+export function autoDensityMode(projectGroups) {
+  const groups = Array.isArray(projectGroups) ? projectGroups : [];
+  const visibleThreads = groups.reduce((total, group) => {
+    return total + (Array.isArray(group.threads) ? group.threads.length : 0);
+  }, 0);
+  return visibleThreads > 24 || groups.length > 6 ? "compact" : "normal";
+}
+
 export function buildReviewItems(projectGroups, reviewedThreadIds = new Set()) {
   return allParentGroups(projectGroups).flatMap((parentGroup) =>
     (parentGroup.digestItems || []).map((item) => ({
@@ -451,7 +459,6 @@ export function normalizePreferences(raw = {}) {
     labels: raw.labels === undefined ? true : Boolean(raw.labels),
     showInactive: Boolean(raw.showInactive),
     privacy: Boolean(raw.privacy),
-    density: raw.density === "compact" ? "compact" : "normal",
     reviewPanelExpanded: Boolean(raw.reviewPanelExpanded),
     showStale: raw.showStale === undefined ? true : Boolean(raw.showStale),
   };

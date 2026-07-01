@@ -440,6 +440,87 @@ p {
   padding: 6px 8px;
 }
 
+.settings-dialog {
+  width: min(360px, calc(100vw - 28px));
+  border: 1px solid rgba(172, 188, 209, 0.24);
+  border-radius: 8px;
+  background: #0b1120;
+  color: var(--text);
+  padding: 0;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.settings-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.settings-form {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.settings-header h2 {
+  font-size: 15px;
+}
+
+.settings-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.settings-inline-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-form input {
+  width: 82px;
+  min-height: 34px;
+  border: 1px solid rgba(172, 188, 209, 0.18);
+  border-radius: 6px;
+  background: rgba(4, 7, 14, 0.74);
+  color: var(--text);
+  padding: 7px 8px;
+  font: inherit;
+  font-weight: 650;
+}
+
+.settings-toggle {
+  min-height: 34px;
+  border: 1px solid rgba(172, 188, 209, 0.2);
+  border-radius: 6px;
+  background: rgba(8, 12, 22, 0.72);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 7px 10px;
+}
+
+.settings-toggle[aria-pressed="true"] {
+  border-color: rgba(34, 211, 238, 0.62);
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.settings-status {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .details-panel {
   min-width: 0;
   overflow: auto;

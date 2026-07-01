@@ -117,21 +117,21 @@
       </aside>
 
       <dialog id="settingsDialog" class="settings-dialog">
-        <form method="dialog">
+        <form id="settingsForm" method="dialog" class="settings-form">
+          <div class="settings-header">
+            <h2>Settings</h2>
+            <button id="settingsClose" class="overlay-close" value="close" type="submit" formnovalidate>Close</button>
+          </div>
           <label>
             Max age
-            <input id="maxAgeHours" name="maxAgeHours" type="number" min="0" step="1" value="8">
-            <span>h</span>
+            <span class="settings-inline-control">
+              <input id="maxAgeHours" name="maxAgeHours" type="number" min="0" step="1" value="8">
+              <span>h</span>
+            </span>
           </label>
-          <label>
-            Density
-            <select id="densityMode" name="densityMode">
-              <option value="normal">Normal</option>
-              <option value="compact">Compact</option>
-            </select>
-          </label>
-          <button id="privacyToggle" type="button" aria-pressed="false">Privacy</button>
-          <button id="inactiveToggle" type="button" aria-pressed="false">Show idle</button>
+          <button id="privacyToggle" class="settings-toggle" type="button" aria-pressed="false">Privacy</button>
+          <button id="inactiveToggle" class="settings-toggle" type="button" aria-pressed="false">Show idle</button>
+          <p id="densityStatus" class="settings-status">Density: Auto</p>
         </form>
       </dialog>
     </main>

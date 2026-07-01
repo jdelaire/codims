@@ -280,7 +280,7 @@ test("privacy mode hides sidebar content", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem(
       "codims.preferences.v1",
-      JSON.stringify({ prefsVersion: 2, maxAgeHours: "8", privacy: true, density: "normal" }),
+      JSON.stringify({ prefsVersion: 2, maxAgeHours: "8", privacy: true }),
     );
   });
   await page.goto(`${baseUrl}/index.html`);
@@ -290,9 +290,39 @@ test("privacy mode hides sidebar content", async ({ page }) => {
   await expect(page.locator(".review-toggle").first()).not.toHaveAttribute("aria-label", /Review sidebar/);
 });
 
-test("mobile layout keeps scene and details visible", async ({ page }) => {
+test("settings overlay controls privacy and idle filters", async ({ page }) => {
+  await page.goto(`${baseUrl}/index.html`);
+  await page.locator("#settingsToggle").click();
+  await expect(page.locator("#settingsDialog")).toBeVisible();
+  await expect(page.locator("#maxAgeHours")).toHaveValue("8");
+  await page.locator("#privacyToggle").click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const raw = localStorage.getItem("codims.preferences.v1");
+        return raw ? Object.hasOwn(JSON.parse(raw), "density") : null;
+      }),
+    )
+    .toBe(false);
+  await page.locator("#settingsClose").click();
+  await page.locator("#inboxToggle").click();
+  await expect(page.locator("#reviewList")).toContainText("Hidden");
+});
+
+test("settings close works with invalid max age", async ({ page }) => {
+  await page.goto(`${baseUrl}/index.html`);
+  await page.locator("#settingsToggle").click();
+  await page.locator("#maxAgeHours").fill("-1");
+  await page.locator("#settingsClose").click();
+  await expect(page.locator("#settingsDialog")).toBeHidden();
+});
+
+test("mobile layout keeps scene and inspector details available", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${baseUrl}/index.html`);
   await expect(page.locator("#scene canvas")).toBeVisible();
-  await expect(page.locator(".details-panel")).toBeVisible();
+  await page.locator("#inboxToggle").click();
+  await page.locator(".review-item-main").filter({ hasText: "Review sidebar" }).click();
+  await expect(page.locator("#inspectorOverlay")).toBeVisible();
+  await expect(page.locator("#detailTitle")).toContainText("Review sidebar");
 });
