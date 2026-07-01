@@ -951,15 +951,19 @@ dd {
   }
 }
 
-@media (max-width: 520px) {
-  .counters {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0;
+@media (max-width: 720px) {
+  .hud-status {
+    max-width: calc(100vw - 166px);
+  }
+
+  .hud-counters {
+    right: 14px;
+    width: auto;
+    min-width: 0;
+    grid-template-columns: repeat(3, minmax(62px, 1fr));
   }
 
   .counter {
-    min-width: 0;
     padding: 7px 6px;
   }
 
@@ -970,5 +974,18 @@ dd {
   .counter-label {
     font-size: 9px;
     letter-spacing: 0.04em;
+  }
+
+  .inbox-drawer,
+  .inspector-overlay {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-height: calc(100vh - 78px);
+  }
+
+  .inspector-overlay {
+    top: auto;
+    bottom: 10px;
   }
 }

@@ -241,7 +241,7 @@ const rimLight = new THREE.DirectionalLight(0x7dd3fc, 0.48);
 rimLight.position.set(-10, 8, -6);
 scene.add(rimLight);
 
-const grid = new THREE.GridHelper(80, 80, focusStudio.gridCenter, focusStudio.gridLine);
+const grid = new THREE.GridHelper(240, 240, focusStudio.gridCenter, focusStudio.gridLine);
 grid.position.y = -0.03;
 scene.add(grid);
 
