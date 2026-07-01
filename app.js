@@ -186,6 +186,7 @@ const state = {
   detailSeq: 0,
   refreshing: false,
   cameraFocus: null,
+  hasInitialCameraFocus: false,
   selectable: [],
   refreshSeq: 0,
 };
@@ -1648,6 +1649,18 @@ function focusParentGroupRoom(parentGroup) {
   }
 }
 
+function focusInitialRoom(projectGroups) {
+  if (state.hasInitialCameraFocus || state.cameraFocus || state.selectedMode) {
+    return;
+  }
+  const room = state.rooms.get(projectGroups[0]?.project);
+  if (!room) {
+    return;
+  }
+  state.hasInitialCameraFocus = true;
+  focusCameraOnRoom(room);
+}
+
 function openActionInboxItem(item) {
   const parentGroup = findParentGroupByKey(actionInboxItemParentKey(item));
   if (parentGroup) {
@@ -1695,6 +1708,7 @@ function applyThreadsPayload(payload) {
   dom.densityStatus.textContent = `Density: Auto (${state.density})`;
   refreshActionInbox();
   reconcileRooms(projectGroups);
+  focusInitialRoom(projectGroups);
   reconcileAgents(projectGroups);
   updateCounters(projectGroups);
   renderReviewLane();
