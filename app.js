@@ -9,6 +9,7 @@ import {
   childVisualLayout,
   densityScale,
   filterActionInboxItems,
+  fetchMaxAgeCovers,
   filterThreadsByMaxAge,
   filterVisibleProjectGroups,
   handoffShouldAnimate,
@@ -177,6 +178,9 @@ const state = {
   selectedId: null,
   selectedThread: null,
   threads: [],
+  lastPayload: null,
+  lastFetchMaxAgeHours: null,
+  localRenderTimer: null,
   rooms: new Map(),
   parentAgents: new Map(),
   agents: new Map(),
@@ -1548,10 +1552,16 @@ function updateStatus(payload) {
   dom.statusText.textContent = `Updated ${generated.toLocaleTimeString()} from Codex app-server${sendStatus}`;
 }
 
-async function fetchThreads() {
-  const params = new URLSearchParams({
-    maxAgeHours: actionInboxFetchMaxAgeHours(dom.maxAgeHours.value || "8"),
-  });
+function currentSceneMaxAgeHours() {
+  return dom.maxAgeHours.value || "8";
+}
+
+function currentFetchMaxAgeHours() {
+  return actionInboxFetchMaxAgeHours(currentSceneMaxAgeHours());
+}
+
+async function fetchThreads(maxAgeHours = currentFetchMaxAgeHours()) {
+  const params = new URLSearchParams({ maxAgeHours });
   const response = await fetch(`/api/threads?${params.toString()}`, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
@@ -1622,72 +1632,118 @@ function renderSelectedParentTimeline() {
   }
 }
 
-async function refreshThreads() {
+function applyThreadsPayload(payload) {
+  const searchedThreads = (payload.threads || []).filter((thread) =>
+    matchesThreadSearch(thread, state.search),
+  );
+  const visibleThreads = filterThreadsByMaxAge(
+    searchedThreads,
+    payload.generated_at_ms,
+    currentSceneMaxAgeHours(),
+  );
+  state.threads = searchedThreads;
+  state.actionInboxProjectGroups = buildProjectParentGroups(searchedThreads);
+  const allProjectGroups = buildProjectParentGroups(visibleThreads);
+  const projectGroups = filterVisibleProjectGroups(allProjectGroups, state.showInactive);
+  state.projectGroups = projectGroups;
+  refreshActionInbox();
+  reconcileRooms(projectGroups);
+  reconcileAgents(projectGroups);
+  updateCounters(projectGroups);
+  renderReviewLane();
+  updateStatus(payload);
+  refreshSelectedDetails(projectGroups);
+}
+
+function refreshSelectedDetails(projectGroups) {
+  if (state.selectedMode === "room") {
+    const selectedProjectVisible = projectGroups.some(
+      (projectGroup) => projectGroup.project === state.selectedProject,
+    );
+    if (!state.selectedProject || !selectedProjectVisible || !state.rooms.has(state.selectedProject)) {
+      clearDetails();
+    }
+    return;
+  }
+
+  if (state.selectedMode === "digest" && state.selectedDigest?.key) {
+    const selectedDigest = projectGroups
+      .flatMap((projectGroup) => projectGroup.parentGroups)
+      .find((parentGroup) => parentGroup.key === state.selectedDigest.key);
+    if (selectedDigest) {
+      renderDigestDetails(selectedDigest);
+    } else {
+      clearDetails();
+    }
+    return;
+  }
+
+  if (state.selectedParentKey) {
+    const selectedParent = findParentGroupByKey(state.selectedParentKey);
+    if (selectedParent) {
+      renderDetails(selectedParent.lead, selectedParent);
+    } else {
+      clearDetails();
+    }
+    return;
+  }
+
+  if (!state.selectedId) {
+    return;
+  }
+
+  const selected = projectGroups
+    .flatMap((projectGroup) => projectGroup.threads)
+    .find((thread) => thread.id === state.selectedId);
+  const selectedFromPayload = selected || state.threads.find((thread) => thread.id === state.selectedId);
+  if (selectedFromPayload) {
+    renderDetails(selectedFromPayload);
+    return;
+  }
+
+  const selectedParent = [...state.parentAgents.values()]
+    .map((agent) => agent.userData.thread)
+    .find((thread) => thread?.id === state.selectedId);
+  if (selectedParent) {
+    renderDetails(selectedParent);
+  } else {
+    clearDetails();
+  }
+}
+
+function scheduleLocalThreadRender() {
+  window.clearTimeout(state.localRenderTimer);
+  state.localRenderTimer = window.setTimeout(() => {
+    state.localRenderTimer = null;
+    if (state.lastPayload) {
+      applyThreadsPayload(state.lastPayload);
+    } else {
+      refreshThreads({ force: true });
+    }
+  }, 80);
+}
+
+async function refreshThreads({ force = false } = {}) {
+  const requestedFetchMaxAgeHours = currentFetchMaxAgeHours();
+  if (
+    !force &&
+    state.lastPayload &&
+    fetchMaxAgeCovers(state.lastFetchMaxAgeHours, requestedFetchMaxAgeHours)
+  ) {
+    applyThreadsPayload(state.lastPayload);
+    return;
+  }
+
   const seq = ++state.refreshSeq;
   state.refreshing = true;
   try {
-    const payload = await fetchThreads();
+    const payload = await fetchThreads(requestedFetchMaxAgeHours);
     if (seq !== state.refreshSeq) {
       return;
     }
-    const searchedThreads = payload.threads.filter((thread) => matchesThreadSearch(thread, state.search));
-    const visibleThreads = filterThreadsByMaxAge(
-      searchedThreads,
-      payload.generated_at_ms,
-      dom.maxAgeHours.value || "8",
-    );
-    state.threads = searchedThreads;
-    state.actionInboxProjectGroups = buildProjectParentGroups(searchedThreads);
-    const allProjectGroups = buildProjectParentGroups(visibleThreads);
-    const projectGroups = filterVisibleProjectGroups(allProjectGroups, state.showInactive);
-    state.projectGroups = projectGroups;
-    refreshActionInbox();
-    reconcileRooms(projectGroups);
-    reconcileAgents(projectGroups);
-    updateCounters(projectGroups);
-    renderReviewLane();
-    updateStatus(payload);
-    if (state.selectedMode === "room") {
-      const selectedProjectVisible = projectGroups.some(
-        (projectGroup) => projectGroup.project === state.selectedProject,
-      );
-      if (!state.selectedProject || !selectedProjectVisible || !state.rooms.has(state.selectedProject)) {
-        clearDetails();
-      }
-    } else if (state.selectedMode === "digest" && state.selectedDigest?.key) {
-      const selectedDigest = projectGroups
-        .flatMap((projectGroup) => projectGroup.parentGroups)
-        .find((parentGroup) => parentGroup.key === state.selectedDigest.key);
-      if (selectedDigest) {
-        renderDigestDetails(selectedDigest);
-      } else {
-        clearDetails();
-      }
-    } else if (state.selectedParentKey) {
-      const selectedParent = findParentGroupByKey(state.selectedParentKey);
-      if (selectedParent) {
-        renderDetails(selectedParent.lead, selectedParent);
-      } else {
-        clearDetails();
-      }
-    } else if (state.selectedId) {
-      const selected = projectGroups
-        .flatMap((projectGroup) => projectGroup.threads)
-        .find((thread) => thread.id === state.selectedId);
-      const selectedFromPayload = selected || state.threads.find((thread) => thread.id === state.selectedId);
-      if (selectedFromPayload) {
-        renderDetails(selectedFromPayload);
-      } else {
-        const selectedParent = [...state.parentAgents.values()]
-          .map((agent) => agent.userData.thread)
-          .find((thread) => thread?.id === state.selectedId);
-        if (selectedParent) {
-          renderDetails(selectedParent);
-        } else {
-          clearDetails();
-        }
-      }
-    }
+    state.lastPayload = payload;
+    state.lastFetchMaxAgeHours = requestedFetchMaxAgeHours;
+    applyThreadsPayload(payload);
   } catch (error) {
     if (seq !== state.refreshSeq) {
       return;
@@ -2449,7 +2505,7 @@ function bindEvents() {
   });
   dom.threadSearch.addEventListener("input", () => {
     state.search = dom.threadSearch.value;
-    refreshThreads();
+    scheduleLocalThreadRender();
   });
   dom.liveToggle.addEventListener("click", () => setLive(!state.live));
   dom.labelsToggle.addEventListener("click", () => setLabels(!state.labels));
@@ -2478,10 +2534,10 @@ function bindEvents() {
 }
 
 function startPolling() {
-  refreshThreads();
+  refreshThreads({ force: true });
   window.setInterval(() => {
     if (shouldPollThreads(state.live, state.refreshing)) {
-      refreshThreads();
+      refreshThreads({ force: true });
     }
   }, 2000);
 }

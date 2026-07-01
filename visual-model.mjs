@@ -197,6 +197,21 @@ export function actionInboxFetchMaxAgeHours(maxAgeHours) {
   return String(Math.max(parsed, STALE_INBOX_FETCH_HOURS));
 }
 
+export function fetchMaxAgeCovers(cachedMaxAgeHours, requestedMaxAgeHours) {
+  const cached = Number(cachedMaxAgeHours);
+  const requested = Number(requestedMaxAgeHours);
+  if (cached === 0) {
+    return true;
+  }
+  if (requested === 0) {
+    return false;
+  }
+  if (!Number.isFinite(cached) || cached < 0 || !Number.isFinite(requested) || requested < 0) {
+    return false;
+  }
+  return cached >= requested;
+}
+
 export function filterThreadsByMaxAge(threads, generatedAtMs, maxAgeHours) {
   const parsed = Number(maxAgeHours);
   if (!Number.isFinite(parsed) || parsed <= 0) {

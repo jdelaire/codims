@@ -11,6 +11,7 @@ import {
   childVisualLayout,
   densityScale,
   actionInboxFetchMaxAgeHours,
+  fetchMaxAgeCovers,
   filterThreadsByMaxAge,
   filterReviewItems,
   filterVisibleProjectGroups,
@@ -544,6 +545,14 @@ assert.equal(actionInboxFetchMaxAgeHours("1"), "24");
 assert.equal(actionInboxFetchMaxAgeHours("24"), "24");
 assert.equal(actionInboxFetchMaxAgeHours("48"), "48");
 assert.equal(actionInboxFetchMaxAgeHours("0"), "0");
+assert.equal(fetchMaxAgeCovers("24", "8"), true);
+assert.equal(fetchMaxAgeCovers("24", "24"), true);
+assert.equal(fetchMaxAgeCovers("24", "48"), false);
+assert.equal(fetchMaxAgeCovers("0", "8"), true);
+assert.equal(fetchMaxAgeCovers("0", "48"), true);
+assert.equal(fetchMaxAgeCovers("24", "0"), false);
+assert.equal(fetchMaxAgeCovers("bad", "8"), false);
+assert.equal(fetchMaxAgeCovers("24", "bad"), false);
 const sceneMaxAgeNowMs = 4 * 60 * 60 * 1000;
 const fetchedForSceneAndInbox = [
   {
