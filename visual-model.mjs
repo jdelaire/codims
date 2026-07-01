@@ -197,9 +197,22 @@ export function actionInboxFetchMaxAgeHours(maxAgeHours) {
   return String(Math.max(parsed, STALE_INBOX_FETCH_HOURS));
 }
 
+function parseMaxAgeForCoverage(value) {
+  if (typeof value === "string") {
+    if (value.trim() === "") {
+      return NaN;
+    }
+    return Number(value);
+  }
+  if (typeof value === "number") {
+    return value;
+  }
+  return NaN;
+}
+
 export function fetchMaxAgeCovers(cachedMaxAgeHours, requestedMaxAgeHours) {
-  const cached = Number(cachedMaxAgeHours);
-  const requested = Number(requestedMaxAgeHours);
+  const cached = parseMaxAgeForCoverage(cachedMaxAgeHours);
+  const requested = parseMaxAgeForCoverage(requestedMaxAgeHours);
   if (!Number.isFinite(cached) || cached < 0 || !Number.isFinite(requested) || requested < 0) {
     return false;
   }

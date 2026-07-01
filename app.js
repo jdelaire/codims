@@ -1746,7 +1746,10 @@ async function refreshThreads({ force = false } = {}) {
     if (!fetchMaxAgeCovers(requestedFetchMaxAgeHours, currentFetchMaxAgeHours())) {
       return;
     }
-    if (!payload.error) {
+    if (payload.error) {
+      state.lastPayload = null;
+      state.lastFetchMaxAgeHours = null;
+    } else {
       state.lastPayload = payload;
       state.lastFetchMaxAgeHours = requestedFetchMaxAgeHours;
     }
