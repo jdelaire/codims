@@ -962,26 +962,29 @@ function createHandoff() {
   const curve = createHandoffCurve(new THREE.Vector3(), new THREE.Vector3(0, 1, 0));
   const geometry = curveLineGeometry(curve);
   const lineMaterial = new THREE.LineBasicMaterial({
-    color: 0x38bdf8,
+    color: gridStudio.cyan,
     transparent: true,
-    opacity: 0.08,
+    opacity: 0.1,
     depthTest: false,
+    blending: THREE.AdditiveBlending,
   });
   const line = new THREE.Line(geometry, lineMaterial);
   line.renderOrder = 10;
   const packetMaterial = new THREE.MeshBasicMaterial({
-    color: 0x38bdf8,
+    color: gridStudio.cyan,
     transparent: true,
-    opacity: 0.82,
+    opacity: 0.92,
     depthTest: false,
+    blending: THREE.AdditiveBlending,
   });
   const packet = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), packetMaterial);
   packet.renderOrder = 11;
   const beamMaterial = new THREE.MeshBasicMaterial({
-    color: 0x38bdf8,
+    color: gridStudio.cyan,
     transparent: true,
-    opacity: 0.16,
+    opacity: 0.24,
     depthTest: false,
+    blending: THREE.AdditiveBlending,
   });
   const beam = new THREE.Mesh(curveTubeGeometry(curve, 0.024), beamMaterial);
   beam.renderOrder = 10;
@@ -998,11 +1001,11 @@ function updateHandoffGeometry(handoff, start, end, color, active) {
   parts.line.geometry.dispose();
   parts.line.geometry = curveLineGeometry(curve);
   parts.beam.geometry.dispose();
-  parts.beam.geometry = curveTubeGeometry(curve, active ? 0.034 : 0.018);
+  parts.beam.geometry = curveTubeGeometry(curve, active ? 0.04 : 0.014);
   parts.lineMaterial.color.setHex(color);
-  parts.lineMaterial.opacity = active ? 0.68 : 0.05;
+  parts.lineMaterial.opacity = active ? 0.82 : 0.08;
   parts.beamMaterial.color.setHex(color);
-  parts.beamMaterial.opacity = active ? 0.2 : 0.03;
+  parts.beamMaterial.opacity = active ? 0.28 : 0.04;
   parts.packetMaterial.color.setHex(color);
   parts.packet.visible = active;
   parts.beam.visible = active;
@@ -1080,7 +1083,7 @@ function updateParentVisualState(parentAgent, parentKey) {
   if (!parentGroup?.isActive) {
     parts.glowMaterial.opacity = selected ? 0.34 : 0.2;
   }
-  parts.disc.scale.setScalar(selected ? 1.12 : 1);
+  parts.disc.scale.setScalar(selected ? 1.16 : 1);
   const label = state.parentLabels.get(parentKey);
   if (label) {
     label.classList.toggle("is-selected", selected);
@@ -1095,6 +1098,7 @@ function updateAgentVisualState(agent, threadId) {
     parts.glowMaterial.opacity = selected ? 0.34 : agentGlowForState(agent.userData.thread).opacity;
   }
   parts.ring.scale.setScalar(selected ? 1.12 : 1);
+  parts.suitLine.scale.setScalar(selected ? 1.12 : 1);
   const label = state.agentLabels.get(threadId);
   if (label) {
     label.classList.toggle("is-selected", selected);
@@ -2215,11 +2219,18 @@ function animateAgents(elapsed) {
     const parentGroup = parentAgent.userData.parentGroup;
     const parts = parentAgent.userData.parts;
     const speed = parentGroup?.isActive ? 2.6 : 0.8;
+    const selected = selectedSceneObject({
+      type: "parent",
+      parentKey: parentGroup?.key || parentAgent.userData.parentKey,
+      threadId: parentGroup?.lead?.id,
+    });
     parentAgent.position.y = Math.sin(elapsed * speed + hashString(parentGroup?.parentId || "")) * (parentGroup?.isActive ? 0.05 : 0.008);
     parts.head.rotation.z = Math.sin(elapsed * speed) * (parentGroup?.isActive ? 0.04 : 0.01);
     parts.ring.scale.setScalar(1 + Math.sin(elapsed * speed) * (parentGroup?.isActive ? 0.08 : 0.012));
     parts.core.scale.setScalar(1 + Math.sin(elapsed * speed * 1.2) * (parentGroup?.isActive ? 0.12 : 0.02));
-    parts.disc.rotation.z = elapsed * (parentGroup?.isActive ? 0.7 : 0.18);
+    parts.disc.rotation.z = elapsed * (parentGroup?.isActive ? 0.8 : 0.2);
+    const discScale = 1 + Math.sin(elapsed * speed * 0.8) * (parentGroup?.isActive ? 0.08 : 0.018);
+    parts.disc.scale.setScalar(selected ? Math.max(1.16, discScale) : discScale);
   }
 
   for (const handoff of state.handoffs.values()) {
