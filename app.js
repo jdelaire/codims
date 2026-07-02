@@ -723,6 +723,11 @@ function markProgramDetails(...objects) {
   }
 }
 
+function markDataLanePart(object) {
+  object.userData.dataLanePart = true;
+  return object;
+}
+
 function agentGlowForState(thread) {
   if (thread.state === "ACTIVE") {
     return { color: gridStudio.active, opacity: 0.62 };
@@ -1090,6 +1095,7 @@ function createHandoff() {
   });
   const line = new THREE.Line(geometry, lineMaterial);
   line.renderOrder = 10;
+  markDataLanePart(line);
   const packetMaterial = new THREE.MeshBasicMaterial({
     color: gridStudio.cyan,
     transparent: true,
@@ -1099,6 +1105,7 @@ function createHandoff() {
   });
   const packet = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), packetMaterial);
   packet.renderOrder = 11;
+  markDataLanePart(packet);
   const beamMaterial = new THREE.MeshBasicMaterial({
     color: gridStudio.cyan,
     transparent: true,
@@ -1108,9 +1115,41 @@ function createHandoff() {
   });
   const beam = new THREE.Mesh(curveTubeGeometry(curve, 0.024), beamMaterial);
   beam.renderOrder = 10;
+  markDataLanePart(beam);
+  const wideBeamMaterial = new THREE.MeshBasicMaterial({
+    color: gridStudio.cyan,
+    transparent: true,
+    opacity: 0.1,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const wideBeam = markDataLanePart(new THREE.Mesh(curveTubeGeometry(curve, 0.06), wideBeamMaterial));
+  wideBeam.renderOrder = 9;
+  const packetHaloMaterial = new THREE.MeshBasicMaterial({
+    color: gridStudio.cyan,
+    transparent: true,
+    opacity: 0.24,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const packetHalo = markDataLanePart(new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), packetHaloMaterial));
+  packetHalo.renderOrder = 10;
   const group = new THREE.Group();
-  group.add(line, beam, packet);
-  group.userData.parts = { line, beam, packet, lineMaterial, beamMaterial, packetMaterial };
+  group.add(line, wideBeam, beam, packetHalo, packet);
+  group.userData.parts = {
+    line,
+    beam,
+    wideBeam,
+    packet,
+    packetHalo,
+    lineMaterial,
+    beamMaterial,
+    wideBeamMaterial,
+    packetMaterial,
+    packetHaloMaterial,
+  };
   scene.add(group);
   return group;
 }
@@ -1122,13 +1161,26 @@ function updateHandoffGeometry(handoff, start, end, color, active) {
   parts.line.geometry = curveLineGeometry(curve);
   parts.beam.geometry.dispose();
   parts.beam.geometry = curveTubeGeometry(curve, active ? 0.04 : 0.014);
+  parts.wideBeam.geometry.dispose();
+  parts.wideBeam.geometry = curveTubeGeometry(curve, active ? 0.075 : 0.02);
+  const laneParts = [parts.line, parts.beam, parts.wideBeam, parts.packet, parts.packetHalo];
+  for (const part of laneParts) {
+    part.userData.activeDataLane = active;
+    part.userData.animatedDataLane = active;
+  }
   parts.lineMaterial.color.setHex(color);
   parts.lineMaterial.opacity = active ? 0.82 : 0.08;
   parts.beamMaterial.color.setHex(color);
   parts.beamMaterial.opacity = active ? 0.28 : 0.04;
+  parts.wideBeamMaterial.color.setHex(color);
+  parts.wideBeamMaterial.opacity = active ? 0.12 : 0.015;
   parts.packetMaterial.color.setHex(color);
+  parts.packetHaloMaterial.color.setHex(color);
+  parts.packetHaloMaterial.opacity = active ? 0.28 : 0;
   parts.packet.visible = active;
+  parts.packetHalo.visible = active;
   parts.beam.visible = active;
+  parts.wideBeam.visible = active;
   handoff.userData.start = start.clone();
   handoff.userData.end = end.clone();
   handoff.userData.curve = curve;
@@ -1261,6 +1313,8 @@ function sceneDebugSnapshot() {
     glowShells: 0,
     pointLights: 0,
     programDetailParts: 0,
+    activeDataLanes: 0,
+    animatedDataLanes: 0,
   };
   scene.traverse((object) => {
     if (object.isPointLight) {
@@ -1272,6 +1326,12 @@ function sceneDebugSnapshot() {
     if (object.userData.programDetailPart) {
       snapshot.programDetailParts += 1;
     }
+    if (object.userData.activeDataLane) {
+      snapshot.activeDataLanes += 1;
+    }
+    if (!state.reducedMotion && object.userData.animatedDataLane) {
+      snapshot.animatedDataLanes += 1;
+    }
     if (object.geometry?.type === "CapsuleGeometry" && object.userData.threadId) {
       snapshot.capsuleAgents += 1;
     }
@@ -1280,6 +1340,7 @@ function sceneDebugSnapshot() {
     ...snapshot,
     hasCapsuleAgents: snapshot.capsuleAgents > 0,
     hasPointLights: snapshot.pointLights > 0,
+    reducedMotionActive: state.reducedMotion,
   };
 }
 
@@ -2431,10 +2492,13 @@ function animateAgents(elapsed) {
     const parts = handoff.userData.parts;
     if (!handoff.userData.active) {
       parts.packet.visible = false;
+      parts.packetHalo.visible = false;
       continue;
     }
     if (state.reducedMotion) {
       parts.packet.visible = false;
+      parts.packetHalo.visible = false;
+      parts.wideBeamMaterial.opacity = 0.1;
       continue;
     }
     const curve = handoff.userData.curve;
@@ -2442,6 +2506,10 @@ function animateAgents(elapsed) {
     parts.packet.visible = true;
     parts.packet.position.copy(curve.getPoint(phase));
     parts.packet.scale.setScalar(0.8 + Math.sin(phase * Math.PI) * 0.9);
+    parts.packetHalo.visible = true;
+    parts.packetHalo.position.copy(parts.packet.position);
+    parts.packetHalo.scale.setScalar(0.75 + Math.sin(phase * Math.PI) * 0.7);
+    parts.wideBeamMaterial.opacity = 0.1 + Math.sin(elapsed * 2.2 + phase * Math.PI) * 0.025;
   }
 
   for (const agent of state.agents.values()) {
