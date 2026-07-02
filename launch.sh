@@ -63,7 +63,7 @@ PY
 
 if port_is_listening; then
   if is_codims_server; then
-    echo "Codims already running at ${URL}"
+    echo "Codex Grid already running at ${URL}"
     if command -v open >/dev/null 2>&1; then
       open "${URL}"
     fi
@@ -79,7 +79,7 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Starting Codims at ${URL}"
+echo "Starting Codex Grid at ${URL}"
 if command -v open >/dev/null 2>&1; then
   (sleep 1 && open "${URL}") &
 fi

@@ -250,6 +250,13 @@ test.afterEach(() => {
   expect(unexpectedMessageRequests).toEqual([]);
 });
 
+test("uses Codex Grid browser chrome labels", async ({ page }) => {
+  await page.goto(`${baseUrl}/index.html`);
+  await expect(page).toHaveTitle("Codex Grid");
+  await expect(page.locator(".hud-layer")).toHaveAttribute("aria-label", "Codex Grid controls");
+  await expect(page.locator(".hud-counters")).toHaveAttribute("aria-label", "Codex Grid counters");
+});
+
 test("renders nonblank scene and action inbox", async ({ page }) => {
   await page.goto(`${baseUrl}/index.html`);
   await expect(page.locator(".app-shell")).toBeVisible();

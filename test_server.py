@@ -1070,6 +1070,25 @@ class ServerCliTests(unittest.TestCase):
         self.assertEqual(args.host, "0.0.0.0")
         self.assertEqual(args.port, 9000)
 
+    def test_main_prints_codex_grid_brand(self):
+        class FakeHTTPServer:
+            def __init__(self, address, handler):
+                self.server_port = 43210
+
+            def serve_forever(self):
+                return None
+
+            def server_close(self):
+                return None
+
+        with (
+            mock.patch.object(server, "ThreadingHTTPServer", FakeHTTPServer),
+            mock.patch("builtins.print") as print_mock,
+        ):
+            self.assertEqual(server.main(["--port", "0"]), 0)
+
+        print_mock.assert_any_call("Codex Grid running at http://127.0.0.1:43210")
+
 
 if __name__ == "__main__":
     unittest.main()

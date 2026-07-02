@@ -91,8 +91,8 @@ class CodexAppServerClient:
             "initialize",
             {
                 "clientInfo": {
-                    "name": "codims",
-                    "title": "Codims",
+                    "name": "codex-grid",
+                    "title": "Codex Grid",
                     "version": "0.1.0",
                 },
                 "capabilities": {"experimentalApi": True},
@@ -860,7 +860,7 @@ def main(argv=None):
     )
     httpd = ThreadingHTTPServer((args.host, args.port), handler)
 
-    print(f"Codims running at http://{args.host}:{httpd.server_port}")
+    print(f"Codex Grid running at http://{args.host}:{httpd.server_port}")
     print(f"Reading Codex threads from {args.codex_bin} app-server")
 
     try:
