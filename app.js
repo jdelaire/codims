@@ -1884,13 +1884,17 @@ function positionLightCycle(lightCycle, route, elapsed) {
     ? (route.phase + elapsed * route.speed) % 1
     : route.phase;
   if (road.axis === "x") {
-    const x = road.startX + (road.endX - road.startX) * phase;
+    const start = Number.isFinite(route.travelStart) ? route.travelStart : road.startX;
+    const end = Number.isFinite(route.travelEnd) ? route.travelEnd : road.endX;
+    const x = start + (end - start) * phase;
     lightCycle.position.set(x, 0, road.z);
-    lightCycle.rotation.y = 0;
+    lightCycle.rotation.y = route.direction < 0 ? Math.PI : 0;
   } else {
-    const z = road.startZ + (road.endZ - road.startZ) * phase;
+    const start = Number.isFinite(route.travelStart) ? route.travelStart : road.startZ;
+    const end = Number.isFinite(route.travelEnd) ? route.travelEnd : road.endZ;
+    const z = start + (end - start) * phase;
     lightCycle.position.set(road.x, 0, z);
-    lightCycle.rotation.y = -Math.PI / 2;
+    lightCycle.rotation.y = route.direction < 0 ? Math.PI / 2 : -Math.PI / 2;
   }
   const parts = lightCycle.userData.parts;
   parts.trail.visible = !state.reducedMotion;
@@ -1903,6 +1907,7 @@ function roomTrafficStates(projectGroups, placements) {
     project: projectGroup.project,
     x: placements[index]?.x || 0,
     z: placements[index]?.z || 0,
+    activeCount: projectGroup.threads.filter((thread) => thread.state === "ACTIVE").length,
     hasActiveThreads: projectGroup.threads.some((thread) => thread.state === "ACTIVE"),
     doneCount: projectGroup.threads.filter((thread) => thread.state === "DONE").length,
   }));

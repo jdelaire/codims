@@ -625,6 +625,41 @@ function nearestRoadSegment(topology, room, index) {
     .road;
 }
 
+function activeThreadCount(room) {
+  const count = Number(room?.activeCount);
+  if (Number.isFinite(count)) {
+    return Math.max(0, count);
+  }
+  return room?.hasActiveThreads ? 1 : 0;
+}
+
+function busiestRoomState(roomStates) {
+  return roomStates
+    .map((room, index) => ({ room, index }))
+    .sort((left, right) => activeThreadCount(right.room) - activeThreadCount(left.room) || left.index - right.index)[0]
+    ?.room || null;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function roadTravelTarget(road, targetRoom) {
+  const roadStart = road.axis === "x" ? road.startX : road.startZ;
+  const roadEnd = road.axis === "x" ? road.endX : road.endZ;
+  const targetValue = Number(targetRoom?.[road.axis === "x" ? "x" : "z"] || 0);
+  const target = Number(clamp(targetValue, Math.min(roadStart, roadEnd), Math.max(roadStart, roadEnd)).toFixed(3));
+  const startDistance = Math.abs(roadStart - target);
+  const endDistance = Math.abs(roadEnd - target);
+  const travelStart = startDistance >= endDistance ? roadStart : roadEnd;
+  const direction = Math.sign(target - travelStart) || 1;
+  return {
+    travelStart: Number(travelStart.toFixed(3)),
+    travelEnd: target,
+    direction,
+  };
+}
+
 export function cityBikeRoutes(topology, roomStates = [], options = {}) {
   const roads = (topology?.horizontalRoads || []).concat(topology?.verticalRoads || []);
   if (!roads.length) {
@@ -646,17 +681,19 @@ export function cityBikeRoutes(topology, roomStates = [], options = {}) {
     .sort((left, right) => {
       const activeDelta = Number(right.room.hasActiveThreads) - Number(left.room.hasActiveThreads);
       const doneDelta = Number(right.room.doneCount > 0) - Number(left.room.doneCount > 0);
-      return activeDelta || doneDelta || left.index - right.index;
+      return activeThreadCount(right.room) - activeThreadCount(left.room) || activeDelta || doneDelta || left.index - right.index;
     })
     .map((entry) => entry.room);
+  const targetRoom = busiestRoomState(roomStates) || prioritizedRoomStates[0] || {};
   const routes = [];
   for (let index = 0; index < routeCount; index += 1) {
     const room = prioritizedRoomStates[index % Math.max(1, prioritizedRoomStates.length)] || {};
-    const road = nearestRoadSegment(topology, room, index) || roads[index % roads.length];
+    const road = nearestRoadSegment(topology, targetRoom, index) || nearestRoadSegment(topology, room, index) || roads[index % roads.length];
     const active = Boolean(room.hasActiveThreads);
     const done = !active && Number(room.doneCount || 0) > 0;
     const kind = active ? "active" : done ? "done" : "ambient";
     const speed = options.reducedMotion ? 0 : active ? 0.22 : done ? 0.1 : 0.14;
+    const travel = roadTravelTarget(road, targetRoom);
     routes.push({
       id: `bike-${index}-${kind}-${road.id}`,
       segmentId: road.id,
@@ -666,6 +703,10 @@ export function cityBikeRoutes(topology, roomStates = [], options = {}) {
       phase: Number(((index * 0.173) % 1).toFixed(3)),
       trailLength: active ? 1.8 : done ? 1.1 : 1.35,
       roomProject: room.project || null,
+      targetProject: targetRoom.project || null,
+      targetX: Number(targetRoom.x || 0),
+      targetZ: Number(targetRoom.z || 0),
+      ...travel,
     });
   }
   return routes;

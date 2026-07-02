@@ -1016,6 +1016,21 @@ const cappedActiveRoutes = cityBikeRoutes(
 );
 assert.equal(cappedActiveRoutes.some((route) => route.kind === "active" && route.roomProject === "project-19"), true);
 
+const directionalRoutes = cityBikeRoutes(topology, [
+  { project: "quiet-left", x: cityPlacements[0].x, z: cityPlacements[0].z, hasActiveThreads: false, activeCount: 0, doneCount: 0 },
+  { project: "busy-target", x: cityPlacements[3].x, z: cityPlacements[3].z, hasActiveThreads: true, activeCount: 5, doneCount: 0 },
+  { project: "less-active", x: cityPlacements[1].x, z: cityPlacements[1].z, hasActiveThreads: true, activeCount: 1, doneCount: 0 },
+], { viewportWidth: 1200 });
+assert.equal(directionalRoutes.every((route) => route.targetProject === "busy-target"), true);
+assert.equal(directionalRoutes.every((route) => Number.isFinite(route.travelStart)), true);
+assert.equal(directionalRoutes.every((route) => Number.isFinite(route.travelEnd)), true);
+for (const route of directionalRoutes) {
+  const road = topology.horizontalRoads.concat(topology.verticalRoads).find((candidate) => candidate.id === route.segmentId);
+  const targetCoordinate = road.axis === "x" ? route.targetX : route.targetZ;
+  assert.ok(Math.abs(route.travelEnd - targetCoordinate) <= Math.abs(route.travelStart - targetCoordinate));
+  assert.equal(Math.sign(route.travelEnd - route.travelStart), route.direction);
+}
+
 const reducedRoutes = cityBikeRoutes(topology, [
   { project: "codims", x: 0, z: 0, hasActiveThreads: true, doneCount: 0 },
 ], { viewportWidth: 1200, reducedMotion: true });
