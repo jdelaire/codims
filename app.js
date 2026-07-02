@@ -717,6 +717,23 @@ function createProgramGlowShell(geometry, color, opacity = 0.16) {
   return shell;
 }
 
+function createProgramAuraRing(radius, color, opacity) {
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(radius, 0.018, 8, 72),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  ring.rotation.x = Math.PI / 2;
+  ring.userData.programAuraRing = true;
+  ring.userData.programDetailPart = true;
+  return ring;
+}
+
 function markProgramDetails(...objects) {
   for (const object of objects) {
     object.userData.programDetailPart = true;
@@ -799,6 +816,11 @@ function createParentAgent(parentGroup) {
   shoulder.castShadow = true;
   group.add(shoulder);
 
+  const helmetBrow = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.08, 0.11), bodyMaterial);
+  helmetBrow.position.set(0, 1.76, 0.18);
+  helmetBrow.castShadow = true;
+  group.add(helmetBrow);
+
   const leftArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.5, 5, 12), bodyMaterial);
   leftArm.position.set(-0.52, 0.82, 0.04);
   leftArm.rotation.z = 0.18;
@@ -817,9 +839,17 @@ function createParentAgent(parentGroup) {
     opacity: 0.92,
     blending: THREE.AdditiveBlending,
   });
+  const visorGlow = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.035, 0.04), visorMaterial);
+  visorGlow.position.set(0, 1.62, 0.315);
+  group.add(visorGlow);
+
   const visor = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.055, 0.065), visorMaterial);
   visor.position.set(0, 1.64, 0.27);
   group.add(visor);
+
+  const chestYoke = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.07), glowMaterial);
+  chestYoke.position.set(0, 1.03, 0.39);
+  group.add(chestYoke);
 
   const core = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.62, 0.08), glowMaterial);
   core.position.set(0, 0.86, 0.38);
@@ -844,24 +874,33 @@ function createParentAgent(parentGroup) {
   ring.position.y = 0.09;
   group.add(ring);
 
+  const auraRing = createProgramAuraRing(0.76, parentGroup.isActive ? gridStudio.active : color, parentGroup.isActive ? 0.18 : 0.06);
+  auraRing.position.y = 0.07;
+  group.add(auraRing);
+
   const disc = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.026, 8, 56), glowMaterial);
   disc.position.set(0, 1.12, -0.29);
   group.add(disc);
 
   markProgramDetails(shoulder, leftArm, rightArm, visor, core, belt, leftArmCircuit, rightArmCircuit, ring, disc);
+  markProgramDetails(helmetBrow, visorGlow, chestYoke, auraRing);
   group.userData.parts = {
     body,
     bodyGlow,
     head,
     shoulder,
+    helmetBrow,
     leftArm,
     rightArm,
+    visorGlow,
     visor,
+    chestYoke,
     core,
     belt,
     leftArmCircuit,
     rightArmCircuit,
     ring,
+    auraRing,
     disc,
     bodyMaterial,
     glowMaterial,
@@ -936,15 +975,28 @@ function createAgent(thread) {
   shoulder.castShadow = true;
   group.add(shoulder);
 
+  const helmetBrow = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.055, 0.08), bodyMaterial);
+  helmetBrow.position.set(0, 1.29, 0.14);
+  helmetBrow.castShadow = true;
+  group.add(helmetBrow);
+
   const statusLightMaterial = new THREE.MeshBasicMaterial({
     color: glow.color,
     transparent: true,
     opacity: thread.state === "ACTIVE" ? 0.95 : 0.42,
     blending: THREE.AdditiveBlending,
   });
+  const visorEdge = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.028, 0.035), statusLightMaterial);
+  visorEdge.position.set(0, 1.18, 0.225);
+  group.add(visorEdge);
+
   const statusLight = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.045, 0.055), statusLightMaterial);
   statusLight.position.set(0, 1.2, 0.19);
   group.add(statusLight);
+
+  const chestStripe = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.05), glowMaterial);
+  chestStripe.position.set(0, 0.78, 0.285);
+  group.add(chestStripe);
 
   const suitLine = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.42, 0.055), glowMaterial);
   suitLine.position.set(0, 0.58, 0.28);
@@ -967,7 +1019,12 @@ function createAgent(thread) {
   ring.position.y = 0.08;
   group.add(ring);
 
+  const auraRing = createProgramAuraRing(0.5, glow.color, thread.state === "ACTIVE" ? 0.16 : 0.05);
+  auraRing.position.y = 0.065;
+  group.add(auraRing);
+
   markProgramDetails(collar, shoulder, statusLight, suitLine, leftHipLine, rightHipLine, backDisc, ring);
+  markProgramDetails(helmetBrow, visorEdge, chestStripe, auraRing);
   group.userData.parts = {
     body,
     bodyGlow,
@@ -975,12 +1032,16 @@ function createAgent(thread) {
     headGlow,
     collar,
     shoulder,
+    helmetBrow,
+    visorEdge,
     statusLight,
+    chestStripe,
     suitLine,
     leftHipLine,
     rightHipLine,
     backDisc,
     ring,
+    auraRing,
     glowMaterial,
     statusLightMaterial,
   };
@@ -1256,6 +1317,8 @@ function updateParentVisualState(parentAgent, parentKey) {
   if (!parentGroup?.isActive) {
     parts.glowMaterial.opacity = selected ? 0.34 : 0.2;
   }
+  parts.auraRing.material.opacity = selected ? 0.24 : parentGroup?.isActive ? 0.18 : 0.06;
+  parts.auraRing.scale.setScalar(selected ? 1.12 : 1);
   parts.disc.scale.setScalar(selected ? 1.16 : 1);
   const label = state.parentLabels.get(parentKey);
   if (label) {
@@ -1270,6 +1333,10 @@ function updateAgentVisualState(agent, threadId) {
   if (agent.userData.thread?.state !== "ACTIVE") {
     parts.glowMaterial.opacity = selected ? 0.34 : agentGlowForState(agent.userData.thread).opacity;
   }
+  const glow = agentGlowForState(agent.userData.thread);
+  parts.auraRing.material.color.setHex(glow.color);
+  parts.auraRing.material.opacity = selected ? 0.24 : agent.userData.thread?.state === "ACTIVE" ? 0.16 : 0.05;
+  parts.auraRing.scale.setScalar(selected ? 1.12 : 1);
   parts.ring.scale.setScalar(selected ? 1.12 : 1);
   parts.suitLine.scale.setScalar(selected ? 1.12 : 1);
   const label = state.agentLabels.get(threadId);
@@ -1313,6 +1380,7 @@ function sceneDebugSnapshot() {
     glowShells: 0,
     pointLights: 0,
     programDetailParts: 0,
+    programAuraRings: 0,
     activeDataLanes: 0,
     animatedDataLanes: 0,
   };
@@ -1325,6 +1393,9 @@ function sceneDebugSnapshot() {
     }
     if (object.userData.programDetailPart) {
       snapshot.programDetailParts += 1;
+    }
+    if (object.userData.programAuraRing) {
+      snapshot.programAuraRings += 1;
     }
     if (object.userData.activeDataLane) {
       snapshot.activeDataLanes += 1;
@@ -2477,6 +2548,7 @@ function animateAgents(elapsed) {
       parts.core.scale.setScalar(1);
       parts.disc.rotation.z = 0;
       parts.disc.scale.setScalar(selected ? 1.16 : 1);
+      parts.auraRing.scale.setScalar(selected ? 1.12 : 1);
       continue;
     }
     parentAgent.position.y = Math.sin(elapsed * speed + hashString(parentGroup?.parentId || "")) * (parentGroup?.isActive ? 0.05 : 0.008);
@@ -2486,6 +2558,7 @@ function animateAgents(elapsed) {
     parts.disc.rotation.z = elapsed * (parentGroup?.isActive ? 0.8 : 0.2);
     const discScale = 1 + Math.sin(elapsed * speed * 0.8) * (parentGroup?.isActive ? 0.08 : 0.018);
     parts.disc.scale.setScalar(selected ? Math.max(1.16, discScale) : discScale);
+    parts.auraRing.scale.setScalar(selected ? Math.max(1.12, discScale) : discScale);
   }
 
   for (const handoff of state.handoffs.values()) {
@@ -2523,6 +2596,7 @@ function animateAgents(elapsed) {
       agent.position.y = 0;
       parts.head.rotation.z = 0;
       parts.ring.scale.setScalar(selected ? 1.12 : 1);
+      parts.auraRing.scale.setScalar(selected ? 1.12 : 1);
       parts.statusLight.scale.setScalar(statusLightScale);
       continue;
     }
@@ -2533,16 +2607,19 @@ function animateAgents(elapsed) {
       agent.position.y = Math.sin(elapsed * speed + hashString(thread.id)) * 0.08;
       parts.head.rotation.z = pulse;
       parts.ring.scale.setScalar(selected ? Math.max(1.12, ringScale) : ringScale);
+      parts.auraRing.scale.setScalar(selected ? Math.max(1.12, ringScale) : ringScale);
       parts.statusLight.scale.setScalar(1.1 + Math.abs(pulse) * 2.2);
     } else if (thread.state === "DONE") {
       agent.position.y = 0;
       parts.head.rotation.z = 0;
       parts.ring.scale.setScalar(selected ? 1.12 : 1);
+      parts.auraRing.scale.setScalar(selected ? 1.12 : 1);
       parts.statusLight.scale.setScalar(selected ? 1.08 : 0.92);
     } else {
       agent.position.y = Math.sin(elapsed * 1.2 + hashString(thread.id)) * 0.008;
       parts.head.rotation.z = Math.sin(elapsed * 0.8) * 0.012;
       parts.ring.scale.setScalar(selected ? 1.12 : 1);
+      parts.auraRing.scale.setScalar(selected ? 1.12 : 1);
       parts.statusLight.scale.setScalar(selected ? 1.08 : 1);
     }
   }
