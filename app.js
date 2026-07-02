@@ -190,8 +190,6 @@ const state = {
   cityRoadTopologyKey: null,
   cityRoadSegments: new Map(),
   cityIntersections: new Map(),
-  lightCycles: new Map(),
-  lightCycleRoutes: [],
   detailCache: new Map(),
   detailSeq: 0,
   refreshing: false,

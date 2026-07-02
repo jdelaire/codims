@@ -930,6 +930,9 @@ assert.equal(oneRoomTopology.horizontalRoads.length, 2);
 assert.equal(oneRoomTopology.verticalRoads.length, 2);
 assert.equal(oneRoomTopology.intersections.length, 4);
 
+const resizedOneRoomTopology = cityRoadTopology([{ x: 0, z: 0, width: 30, depth: 20, row: 0, col: 0 }]);
+assert.notEqual(resizedOneRoomTopology.key, oneRoomTopology.key);
+
 const malformedTopology = cityRoadTopology([{ x: 0, z: 0, width: Infinity, depth: NaN, row: 0, col: 0 }]);
 assert.equal(Number.isFinite(malformedTopology.bounds.width), true);
 assert.equal(Number.isFinite(malformedTopology.bounds.depth), true);

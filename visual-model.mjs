@@ -531,6 +531,10 @@ export function cityRoadTopology(placements) {
       z: horizontal.z,
     })),
   );
+  const boundsKey = [minX, maxX, minZ, maxZ].map((value) => Number(value).toFixed(3)).join(",");
+  const roomsKey = rooms
+    .map((room) => [room.index, room.x, room.z, room.width, room.depth, room.row, room.col].join(":"))
+    .join("|");
 
   return {
     horizontalRoads,
@@ -544,7 +548,7 @@ export function cityRoadTopology(placements) {
       width: Number((maxX - minX).toFixed(3)),
       depth: Number((maxZ - minZ).toFixed(3)),
     },
-    key: `h${horizontalRoads.length}-v${verticalRoads.length}-${rooms.map((room) => `${room.index}:${room.x},${room.z}`).join("|")}`,
+    key: `h${horizontalRoads.length}-v${verticalRoads.length}-b${boundsKey}-${roomsKey}`,
   };
 }
 
