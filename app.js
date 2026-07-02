@@ -1317,6 +1317,9 @@ function updateParentVisualState(parentAgent, parentKey) {
   if (!parentGroup?.isActive) {
     parts.glowMaterial.opacity = selected ? 0.34 : 0.2;
   }
+  if (parentGroup) {
+    parts.auraRing.material.color.setHex(parentGroup.isActive ? gridStudio.active : parentGroupColor(parentGroup));
+  }
   parts.auraRing.material.opacity = selected ? 0.24 : parentGroup?.isActive ? 0.18 : 0.06;
   parts.auraRing.scale.setScalar(selected ? 1.12 : 1);
   parts.disc.scale.setScalar(selected ? 1.16 : 1);
