@@ -953,7 +953,7 @@ dd {
 
 @media (max-width: 720px) {
   .hud-status {
-    max-width: calc(100vw - 166px);
+    max-width: calc(100vw - 174px);
   }
 
   .hud-counters {
