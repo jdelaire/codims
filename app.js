@@ -1424,10 +1424,10 @@ function sceneDebugSnapshot() {
     if (object.userData.roomCircuitPulseSurface) {
       snapshot.roomCircuitPulseSurfaces += 1;
     }
-    if (object.userData.activeDataLane) {
+    if (object.userData.activeDataLane && object.visible !== false) {
       snapshot.activeDataLanes += 1;
     }
-    if (!state.reducedMotion && object.userData.animatedDataLane) {
+    if (object.userData.animatedDataLane && object.visible !== false && !state.reducedMotion) {
       snapshot.animatedDataLanes += 1;
     }
     if (object.geometry?.type === "CapsuleGeometry" && object.userData.threadId) {
