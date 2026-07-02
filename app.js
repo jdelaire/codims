@@ -217,7 +217,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.08;
+renderer.toneMappingExposure = 1.16;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 dom.scene.appendChild(renderer.domElement);
@@ -232,18 +232,22 @@ const clock = new THREE.Clock();
 const CLICK_MOVE_LIMIT_PX = 6;
 let pendingPointerPick = null;
 
-const ambient = new THREE.HemisphereLight(gridStudio.ambientSky, gridStudio.ambientGround, 1.25);
+const ambient = new THREE.HemisphereLight(gridStudio.ambientSky, gridStudio.ambientGround, 0.74);
 scene.add(ambient);
 
-const keyLight = new THREE.DirectionalLight(0x9ff7ff, 2.1);
+const keyLight = new THREE.DirectionalLight(0x9ff7ff, 2.35);
 keyLight.position.set(9, 16, 7);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.set(2048, 2048);
 scene.add(keyLight);
 
-const rimLight = new THREE.DirectionalLight(0x00e5ff, 0.72);
+const rimLight = new THREE.DirectionalLight(0x00e5ff, 1.28);
 rimLight.position.set(-10, 8, -6);
 scene.add(rimLight);
+
+const amberFillLight = new THREE.DirectionalLight(0xff8a00, 0.34);
+amberFillLight.position.set(7, 5, -9);
+scene.add(amberFillLight);
 
 const grid = new THREE.GridHelper(240, 240, gridStudio.gridCenter, gridStudio.gridLine);
 grid.position.y = -0.03;
@@ -542,6 +546,10 @@ function createRoom(project) {
   );
   group.add(sideLightRail);
 
+  const roomLight = new THREE.PointLight(projectAccent, 0.18, 10, 2);
+  roomLight.position.set(0, 2.1, 0);
+  group.add(roomLight);
+
   const signTexture = createProjectDisplayTexture(project, 0, state.privacy);
   const signBack = new THREE.Mesh(
     new THREE.BoxGeometry(5.25, 1.28, 0.16),
@@ -611,6 +619,7 @@ function createRoom(project) {
     wallPanels,
     backLightRail,
     sideLightRail,
+    roomLight,
     signBack,
     signFace,
     struts,
@@ -684,6 +693,8 @@ function updateRoomSize(room, layout) {
   parts.backLightRail.position.set(0, 2.03, -depth / 2 + 0.18);
   parts.sideLightRail.scale.set(1, 1, depth - 0.9);
   parts.sideLightRail.position.set(-width / 2 + 0.16, 2.02, 0.12);
+  parts.roomLight.distance = Math.max(8, Math.max(width, depth) * 0.82);
+  parts.roomLight.position.set(0, 2.08, -depth * 0.08);
 
   const signZ = -depth / 2 + 0.54;
   parts.signBack.position.set(0, PROJECT_SIGN_Y, signZ);
@@ -700,6 +711,27 @@ function createLabel(className) {
   label.className = className;
   dom.labels.appendChild(label);
   return label;
+}
+
+function createProgramGlowShell(geometry, color, opacity = 0.16) {
+  const shell = new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  shell.userData.glowShell = true;
+  return shell;
+}
+
+function markProgramDetails(...objects) {
+  for (const object of objects) {
+    object.userData.programDetailPart = true;
+  }
 }
 
 function agentGlowForState(thread) {
@@ -725,10 +757,12 @@ function createParentAgent(parentGroup) {
   group.userData.parentKey = parentGroup.key;
 
   const color = parentGroupColor(parentGroup);
-  const bodyMaterial = new THREE.MeshStandardMaterial({
+  const bodyMaterial = new THREE.MeshPhysicalMaterial({
     color: 0x07111b,
     roughness: 0.36,
     metalness: 0.34,
+    clearcoat: 0.34,
+    clearcoatRoughness: 0.32,
     emissive: color,
     emissiveIntensity: parentGroup.isActive ? 0.12 : 0.035,
   });
@@ -746,10 +780,19 @@ function createParentAgent(parentGroup) {
     blending: THREE.AdditiveBlending,
   });
 
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.46, 1.32, 6), bodyMaterial);
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.38, 0.74, 8, 18), bodyMaterial);
   body.position.y = 0.78;
   body.castShadow = true;
   group.add(body);
+
+  const bodyGlow = createProgramGlowShell(
+    new THREE.CapsuleGeometry(0.42, 0.78, 8, 18),
+    color,
+    parentGroup.isActive ? 0.12 : 0.06,
+  );
+  bodyGlow.position.copy(body.position);
+  bodyGlow.scale.set(1.05, 1.02, 1.05);
+  group.add(bodyGlow);
 
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 18, 14), headMaterial);
   head.scale.set(0.86, 1, 0.78);
@@ -761,6 +804,18 @@ function createParentAgent(parentGroup) {
   shoulder.position.y = 1.16;
   shoulder.castShadow = true;
   group.add(shoulder);
+
+  const leftArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.5, 5, 12), bodyMaterial);
+  leftArm.position.set(-0.52, 0.82, 0.04);
+  leftArm.rotation.z = 0.18;
+  leftArm.castShadow = true;
+  group.add(leftArm);
+
+  const rightArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.5, 5, 12), bodyMaterial);
+  rightArm.position.set(0.52, 0.82, 0.04);
+  rightArm.rotation.z = -0.18;
+  rightArm.castShadow = true;
+  group.add(rightArm);
 
   const visorMaterial = new THREE.MeshBasicMaterial({
     color: gridStudio.cyan,
@@ -780,6 +835,16 @@ function createParentAgent(parentGroup) {
   belt.position.set(0, 0.64, 0.39);
   group.add(belt);
 
+  const leftArmCircuit = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.36, 0.055), glowMaterial);
+  leftArmCircuit.position.set(-0.51, 0.83, 0.14);
+  leftArmCircuit.rotation.z = 0.18;
+  group.add(leftArmCircuit);
+
+  const rightArmCircuit = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.36, 0.055), glowMaterial);
+  rightArmCircuit.position.set(0.51, 0.83, 0.14);
+  rightArmCircuit.rotation.z = -0.18;
+  group.add(rightArmCircuit);
+
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.022, 8, 64), glowMaterial);
   ring.rotation.x = Math.PI / 2;
   ring.position.y = 0.09;
@@ -789,7 +854,24 @@ function createParentAgent(parentGroup) {
   disc.position.set(0, 1.12, -0.29);
   group.add(disc);
 
-  group.userData.parts = { body, head, shoulder, visor, core, belt, ring, disc, bodyMaterial, glowMaterial };
+  markProgramDetails(shoulder, leftArm, rightArm, visor, core, belt, leftArmCircuit, rightArmCircuit, ring, disc);
+  group.userData.parts = {
+    body,
+    bodyGlow,
+    head,
+    shoulder,
+    leftArm,
+    rightArm,
+    visor,
+    core,
+    belt,
+    leftArmCircuit,
+    rightArmCircuit,
+    ring,
+    disc,
+    bodyMaterial,
+    glowMaterial,
+  };
   scene.add(group);
   return group;
 }
@@ -800,10 +882,12 @@ function createAgent(thread) {
 
   const color = parentColor(thread);
   const glow = agentGlowForState(thread);
-  const bodyMaterial = new THREE.MeshStandardMaterial({
+  const bodyMaterial = new THREE.MeshPhysicalMaterial({
     color: agentBodyColor(thread, color),
     roughness: 0.38,
     metalness: 0.28,
+    clearcoat: 0.28,
+    clearcoatRoughness: 0.34,
     emissive: color,
     emissiveIntensity: thread.state === "ACTIVE" ? 0.08 : 0.025,
   });
@@ -821,11 +905,20 @@ function createAgent(thread) {
     blending: THREE.AdditiveBlending,
   });
 
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.29, 0.9, 6), bodyMaterial);
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.5, 7, 16), bodyMaterial);
   body.position.y = 0.56;
   body.castShadow = true;
   body.userData.threadId = thread.id;
   group.add(body);
+
+  const bodyGlow = createProgramGlowShell(
+    new THREE.CapsuleGeometry(0.27, 0.54, 7, 16),
+    glow.color,
+    thread.state === "ACTIVE" ? 0.14 : 0.07,
+  );
+  bodyGlow.position.copy(body.position);
+  bodyGlow.scale.set(1.05, 1.02, 1.05);
+  group.add(bodyGlow);
 
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.23, 16, 12), headMaterial);
   head.scale.set(0.86, 1, 0.78);
@@ -834,10 +927,20 @@ function createAgent(thread) {
   head.userData.threadId = thread.id;
   group.add(head);
 
+  const headGlow = createProgramGlowShell(new THREE.SphereGeometry(0.255, 16, 12), gridStudio.cyan, 0.08);
+  headGlow.scale.copy(head.scale);
+  headGlow.position.copy(head.position);
+  group.add(headGlow);
+
   const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.31, 0.07, 6), bodyMaterial);
   collar.position.y = 0.94;
   collar.castShadow = true;
   group.add(collar);
+
+  const shoulder = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.075, 0.24), bodyMaterial);
+  shoulder.position.y = 0.84;
+  shoulder.castShadow = true;
+  group.add(shoulder);
 
   const statusLightMaterial = new THREE.MeshBasicMaterial({
     color: glow.color,
@@ -853,12 +956,40 @@ function createAgent(thread) {
   suitLine.position.set(0, 0.58, 0.28);
   group.add(suitLine);
 
+  const leftHipLine = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.26, 0.05), glowMaterial);
+  leftHipLine.position.set(-0.12, 0.4, 0.25);
+  group.add(leftHipLine);
+
+  const rightHipLine = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.26, 0.05), glowMaterial);
+  rightHipLine.position.set(0.12, 0.4, 0.25);
+  group.add(rightHipLine);
+
+  const backDisc = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.017, 8, 32), glowMaterial);
+  backDisc.position.set(0, 0.74, -0.19);
+  group.add(backDisc);
+
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.018, 8, 48), glowMaterial);
   ring.rotation.x = Math.PI / 2;
   ring.position.y = 0.08;
   group.add(ring);
 
-  group.userData.parts = { body, head, collar, statusLight, suitLine, ring, glowMaterial, statusLightMaterial };
+  markProgramDetails(collar, shoulder, statusLight, suitLine, leftHipLine, rightHipLine, backDisc, ring);
+  group.userData.parts = {
+    body,
+    bodyGlow,
+    head,
+    headGlow,
+    collar,
+    shoulder,
+    statusLight,
+    suitLine,
+    leftHipLine,
+    rightHipLine,
+    backDisc,
+    ring,
+    glowMaterial,
+    statusLightMaterial,
+  };
   scene.add(group);
   state.selectable.push(body, head);
   return group;
@@ -1068,6 +1199,7 @@ function updateRoomVisualState(room, project) {
   parts.leftRail.material.opacity = selected ? 0.9 : gridStudio.room.railOpacity * 0.82;
   parts.rightRail.material.opacity = selected ? 0.9 : gridStudio.room.railOpacity * 0.82;
   parts.signBack.material.emissiveIntensity = selected ? 0.46 : 0.14;
+  parts.roomLight.intensity = selected ? 1.15 : room.userData.hasActiveThreads ? 0.62 : 0.18;
   parts.selectionFrame.visible = selected;
   parts.selectionFrameMaterial.opacity = selected ? 0.9 : 0;
 }
@@ -1134,6 +1266,36 @@ function updateSceneVisualStates() {
   }
 }
 
+function sceneDebugSnapshot() {
+  const snapshot = {
+    capsuleAgents: 0,
+    glowShells: 0,
+    pointLights: 0,
+    programDetailParts: 0,
+  };
+  scene.traverse((object) => {
+    if (object.isPointLight) {
+      snapshot.pointLights += 1;
+    }
+    if (object.userData.glowShell) {
+      snapshot.glowShells += 1;
+    }
+    if (object.userData.programDetailPart) {
+      snapshot.programDetailParts += 1;
+    }
+    if (object.geometry?.type === "CapsuleGeometry" && object.userData.threadId) {
+      snapshot.capsuleAgents += 1;
+    }
+  });
+  return {
+    ...snapshot,
+    hasCapsuleAgents: snapshot.capsuleAgents > 0,
+    hasPointLights: snapshot.pointLights > 0,
+  };
+}
+
+window.__codimsSceneDebug = sceneDebugSnapshot;
+
 function reconcileRooms(projectGroups) {
   const activeProjects = new Set(projectGroups.map((group) => group.project));
   const roomLayouts = new Map(
@@ -1162,6 +1324,7 @@ function reconcileRooms(projectGroups) {
     }
     room.position.copy(roomPosition(index, projectGroups.length, roomSpacing.gapX, roomSpacing.gapZ));
     room.userData.layout = layout;
+    room.userData.hasActiveThreads = threads.some((thread) => thread.state === "ACTIVE");
     updateRoomSize(room, layout);
     const display = room.userData.projectDisplay;
     if (

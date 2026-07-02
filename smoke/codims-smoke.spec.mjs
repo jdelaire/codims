@@ -275,6 +275,13 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
     accent: "#00e5ff",
     warn: "#ff8a00",
   });
+  const sceneDebug = await page.evaluate(() => window.__codimsSceneDebug?.());
+  expect(sceneDebug).toMatchObject({
+    hasCapsuleAgents: true,
+    hasPointLights: true,
+  });
+  expect(sceneDebug.programDetailParts).toBeGreaterThanOrEqual(6);
+  expect(sceneDebug.glowShells).toBeGreaterThanOrEqual(3);
   await expect(page.locator("#inboxBadge")).toHaveText("2");
   await expect(page.locator("#inboxToggle")).toHaveAttribute("aria-label", "2 items need review");
   await expect(page.locator("#inboxDrawer")).toBeHidden();
