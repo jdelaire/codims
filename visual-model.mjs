@@ -364,8 +364,8 @@ export function projectRoomGridSpacing(layouts) {
   const maxWidth = Math.max(9.2, ...layouts.map((layout) => layout.width));
   const maxDepth = Math.max(6.8, ...layouts.map((layout) => layout.depth));
   return {
-    gapX: Number((maxWidth + 0.35).toFixed(3)),
-    gapZ: Number((maxDepth + 0.35).toFixed(3)),
+    gapX: Number((maxWidth + 2.25).toFixed(3)),
+    gapZ: Number((maxDepth + 1.75).toFixed(3)),
   };
 }
 

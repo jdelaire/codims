@@ -288,11 +288,22 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
   await page.locator("#inboxToggle").click();
   await expect(page.locator("#inboxToggle")).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#inboxDrawer")).toBeVisible();
+  await expect(page.locator('[data-action-inbox-filter="needs_review"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(page.locator("#reviewList")).toContainText("Review sidebar");
   await expect(page.locator("#reviewPanelToggle")).toHaveCount(0);
   await expect(page.locator("#reviewStaleToggle")).toHaveCount(0);
   await expect(page.locator("#reviewUnreviewedToggle")).toHaveCount(0);
+  await expect(page.locator(".review-item.is-running")).toHaveCount(0);
+  await page.locator('[data-action-inbox-filter="running"]').click();
+  await expect(page.locator('[data-action-inbox-filter="running"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(page.locator(".review-item.is-running")).toHaveCount(1);
+  await expect(page.locator("#reviewList")).toContainText("Ship Codims");
   await page.locator('[data-action-inbox-filter="needs_review"]').click();
   await expect(page.locator('[data-action-inbox-filter="needs_review"]')).toHaveAttribute(
     "aria-pressed",

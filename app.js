@@ -156,7 +156,7 @@ const state = {
   density: "normal",
   search: "",
   inboxOpen: false,
-  actionInboxFilter: null,
+  actionInboxFilter: "needs_review",
   inspectorOpen: false,
   actionInbox: buildActionInbox([]),
   reviewedThreadIds: loadReviewedThreadIds(),
@@ -2610,7 +2610,7 @@ function bindEvents() {
   for (const button of dom.actionInboxButtons) {
     button.addEventListener("click", () => {
       const filter = button.dataset.actionInboxFilter;
-      state.actionInboxFilter = state.actionInboxFilter === filter ? null : filter;
+      state.actionInboxFilter = filter;
       renderReviewLane();
     });
   }

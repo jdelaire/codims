@@ -875,9 +875,9 @@ const roomSpacing = projectRoomGridSpacing([
   { width: 9.2, depth: 6.8 },
   { width: 14, depth: 8 },
 ]);
-assert.equal(roomSpacing.gapX, 14.35);
-assert.equal(roomSpacing.gapZ, 8.35);
-assert.ok(roomSpacing.gapX > 14);
+assert.equal(roomSpacing.gapX, 16.25);
+assert.equal(roomSpacing.gapZ, 9.75);
+assert.ok(roomSpacing.gapX > 16);
 
 assert.equal(projectDisplayText("thaiquest", 27), "THAIQUEST (27)");
 assert.equal(projectDisplayText("", 3), "UNKNOWN (3)");
