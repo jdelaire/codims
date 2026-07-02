@@ -287,6 +287,11 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
   expect(sceneDebug.depthTestDisabledDataLanes).toBe(0);
   expect(sceneDebug.programAuraRings).toBeGreaterThanOrEqual(2);
   expect(sceneDebug.roomCircuitPulseSurfaces).toBeGreaterThanOrEqual(1);
+  expect(sceneDebug.cityRoadSegments).toBeGreaterThanOrEqual(4);
+  expect(sceneDebug.cityIntersections).toBeGreaterThanOrEqual(4);
+  expect(sceneDebug.lightCycleBikes).toBeGreaterThanOrEqual(2);
+  expect(sceneDebug.lightCycleTrails).toBeGreaterThanOrEqual(2);
+  expect(sceneDebug.animatedLightCycles).toBeGreaterThanOrEqual(1);
   await expect(page.locator("#inboxBadge")).toHaveText("2");
   await expect(page.locator("#inboxToggle")).toHaveAttribute("aria-label", "2 items need review");
   await expect(page.locator("#inboxDrawer")).toBeHidden();
@@ -471,6 +476,8 @@ test("reduced motion keeps scene animation static", async ({ page }) => {
   expect(sceneDebug.reducedMotionActive).toBe(true);
   expect(sceneDebug.activeDataLanes).toBeGreaterThanOrEqual(1);
   expect(sceneDebug.animatedDataLanes).toBe(0);
+  expect(sceneDebug.lightCycleBikes).toBeGreaterThanOrEqual(2);
+  expect(sceneDebug.animatedLightCycles).toBe(0);
   await page.waitForTimeout(1200);
   const canvas = page.locator("#scene canvas");
   const before = await canvas.screenshot();
