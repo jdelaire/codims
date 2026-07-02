@@ -12,7 +12,7 @@ const threadsPayload = {
   source: "codex_app_server",
   generated_at_ms: Date.now(),
   capabilities: { read_threads: true, send_messages: false },
-  counts: { active: 1, visible: 3, projects: 1 },
+  counts: { active: 1, visible: 4, projects: 1 },
   threads: [
     {
       id: "parent",
@@ -58,6 +58,21 @@ const threadsPayload = {
       state: "DONE",
       intensity: "idle",
       last_response_snippet: "Sidebar reviewed.",
+    },
+    {
+      id: "parent-done",
+      title: "Clarify inbox contents",
+      nickname: "Clarify inbox contents",
+      role: "thread",
+      cwd: "/repo/codims",
+      project: "codims",
+      parent_id: "parent-done",
+      parent_title: "Clarify inbox contents",
+      updated_at_ms: Date.now() - 480000,
+      age_seconds: 480,
+      state: "DONE",
+      intensity: "idle",
+      last_response_snippet: "Inbox contents clarified.",
     },
   ],
 };
@@ -265,7 +280,7 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
   await expect(page.locator("#scene canvas")).toBeVisible();
   await expect(page.locator("#statusText")).toBeVisible();
   await expect(page.locator("#activeCount")).toHaveText("1");
-  await expect(page.locator("#visibleCount")).toHaveText("3");
+  await expect(page.locator("#visibleCount")).toHaveText("4");
   await expect(page.locator("#projectCount")).toHaveText("1");
   await expect(page.locator("#inboxToggle")).toBeVisible();
   await expect(page.locator("#settingsToggle")).toBeVisible();
@@ -301,7 +316,7 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
   expect(sceneDebug.lightCycleTrails).toBeGreaterThanOrEqual(2);
   expect(sceneDebug.animatedLightCycles).toBeGreaterThanOrEqual(1);
   expect(sceneDebug.reviewBeams).toBeGreaterThanOrEqual(1);
-  expect(sceneDebug.visibleReviewBeams).toBe(1);
+  expect(sceneDebug.visibleReviewBeams).toBe(2);
   expect(sceneDebug.reviewBeamParticleFields).toBeGreaterThanOrEqual(2);
   await page.locator("#settingsToggle").click();
   await page.locator("#inactiveToggle").click();
@@ -310,6 +325,7 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
   const labelStyles = await page.evaluate(() => {
     const active = document.querySelector('.agent-label[data-thread-id="child-active"]');
     const inactive = document.querySelector('.agent-label[data-thread-id="child-done"]');
+    const inactiveParent = document.querySelector('.parent-label[data-parent-key="codims:parent-done"]');
     const emptyDigest = document.createElement("div");
     emptyDigest.className = "digest-label is-empty";
     emptyDigest.textContent = "0 done";
@@ -328,14 +344,33 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
       inactiveFontWeight: inactiveStyles?.fontWeight || null,
       inactiveOpacity: inactiveStyles?.opacity || null,
       inactiveTextTransform: inactiveStyles?.textTransform || null,
+      inactiveParentClass: inactiveParent?.className || null,
+      inactiveParentBackground: inactiveParent ? getComputedStyle(inactiveParent).backgroundColor : null,
+      inactiveParentBorderColor: inactiveParent ? getComputedStyle(inactiveParent).borderTopColor : null,
+      inactiveParentBorderWidth: inactiveParent ? getComputedStyle(inactiveParent).borderTopWidth : null,
+      inactiveParentBoxShadow: inactiveParent ? getComputedStyle(inactiveParent).boxShadow : null,
+      inactiveParentColor: inactiveParent ? getComputedStyle(inactiveParent).color : null,
+      inactiveParentFontSize: inactiveParent ? getComputedStyle(inactiveParent).fontSize : null,
+      inactiveParentFontWeight: inactiveParent ? getComputedStyle(inactiveParent).fontWeight : null,
+      inactiveParentMaxWidth: inactiveParent ? getComputedStyle(inactiveParent).maxWidth : null,
+      inactiveParentOpacity: inactiveParent ? getComputedStyle(inactiveParent).opacity : null,
+      inactiveParentPaddingTop: inactiveParent ? getComputedStyle(inactiveParent).paddingTop : null,
+      inactiveParentPaddingRight: inactiveParent ? getComputedStyle(inactiveParent).paddingRight : null,
+      inactiveParentTextTransform: inactiveParent ? getComputedStyle(inactiveParent).textTransform : null,
+      inactiveParentWhiteSpace: inactiveParent ? getComputedStyle(inactiveParent).whiteSpace : null,
       emptyDigestBackground: emptyDigestStyles.backgroundColor,
       emptyDigestBorderColor: emptyDigestStyles.borderTopColor,
+      emptyDigestBorderWidth: emptyDigestStyles.borderTopWidth,
       emptyDigestBoxShadow: emptyDigestStyles.boxShadow,
       emptyDigestColor: emptyDigestStyles.color,
       emptyDigestFontSize: emptyDigestStyles.fontSize,
       emptyDigestFontWeight: emptyDigestStyles.fontWeight,
+      emptyDigestMaxWidth: emptyDigestStyles.maxWidth,
       emptyDigestOpacity: emptyDigestStyles.opacity,
+      emptyDigestPaddingTop: emptyDigestStyles.paddingTop,
+      emptyDigestPaddingRight: emptyDigestStyles.paddingRight,
       emptyDigestTextTransform: emptyDigestStyles.textTransform,
+      emptyDigestWhiteSpace: emptyDigestStyles.whiteSpace,
     };
   });
   expect(labelStyles.inactiveClass).toContain("is-inactive");
@@ -347,9 +382,23 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
   expect(labelStyles.inactiveFontWeight).toBe(labelStyles.emptyDigestFontWeight);
   expect(labelStyles.inactiveOpacity).toBe(labelStyles.emptyDigestOpacity);
   expect(labelStyles.inactiveTextTransform).toBe(labelStyles.emptyDigestTextTransform);
+  expect(labelStyles.inactiveParentClass).toContain("is-inactive");
+  expect(labelStyles.inactiveParentBackground).toBe(labelStyles.emptyDigestBackground);
+  expect(labelStyles.inactiveParentBorderColor).toBe(labelStyles.emptyDigestBorderColor);
+  expect(labelStyles.inactiveParentBorderWidth).toBe(labelStyles.emptyDigestBorderWidth);
+  expect(labelStyles.inactiveParentBoxShadow).toBe(labelStyles.emptyDigestBoxShadow);
+  expect(labelStyles.inactiveParentColor).toBe(labelStyles.emptyDigestColor);
+  expect(labelStyles.inactiveParentFontSize).toBe(labelStyles.emptyDigestFontSize);
+  expect(labelStyles.inactiveParentFontWeight).toBe(labelStyles.emptyDigestFontWeight);
+  expect(labelStyles.inactiveParentMaxWidth).toBe(labelStyles.emptyDigestMaxWidth);
+  expect(labelStyles.inactiveParentOpacity).toBe(labelStyles.emptyDigestOpacity);
+  expect(labelStyles.inactiveParentPaddingTop).toBe(labelStyles.emptyDigestPaddingTop);
+  expect(labelStyles.inactiveParentPaddingRight).toBe(labelStyles.emptyDigestPaddingRight);
+  expect(labelStyles.inactiveParentTextTransform).toBe(labelStyles.emptyDigestTextTransform);
+  expect(labelStyles.inactiveParentWhiteSpace).toBe(labelStyles.emptyDigestWhiteSpace);
   expect(Number(labelStyles.inactiveOpacity)).toBeLessThan(Number(labelStyles.activeOpacity));
-  await expect(page.locator("#inboxBadge")).toHaveText("2");
-  await expect(page.locator("#inboxToggle")).toHaveAttribute("aria-label", "2 items need review");
+  await expect(page.locator("#inboxBadge")).toHaveText("3");
+  await expect(page.locator("#inboxToggle")).toHaveAttribute("aria-label", "3 items need review");
   await expect(page.locator("#inboxDrawer")).toBeHidden();
   await page.locator("#inboxToggle").click();
   await expect(page.locator("#inboxToggle")).toHaveAttribute("aria-expanded", "true");
@@ -360,6 +409,7 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
   );
   await expect(page.locator("#reviewList")).toContainText("Review sidebar");
   await expect(page.locator("#reviewList")).toContainText("Ship Codims");
+  await expect(page.locator("#reviewList")).toContainText("Clarify inbox contents");
   await expect(page.locator("#reviewPanelToggle")).toHaveCount(0);
   await expect(page.locator("#reviewStaleToggle")).toHaveCount(0);
   await expect(page.locator("#reviewUnreviewedToggle")).toHaveCount(0);
@@ -410,7 +460,10 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
 
 test("hides review beam when digest items are reviewed", async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("codims.reviewedThreads.v1", JSON.stringify(["child-done", "parent"]));
+    localStorage.setItem(
+      "codims.reviewedThreads.v1",
+      JSON.stringify(["child-done", "parent", "parent-done"]),
+    );
   });
   await page.goto(`${baseUrl}/index.html`);
   await expect(page.locator("#activeCount")).toHaveText("1");

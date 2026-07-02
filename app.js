@@ -1616,7 +1616,11 @@ function updateParentVisualState(parentAgent, parentKey) {
   const label = state.parentLabels.get(parentKey);
   if (label) {
     label.classList.toggle("is-selected", selected);
-    label.style.borderColor = selected ? SELECTED_LABEL_BORDER : label.dataset.borderColor || "";
+    label.style.borderColor = selected
+      ? SELECTED_LABEL_BORDER
+      : label.classList.contains("is-inactive")
+        ? ""
+        : label.dataset.borderColor || "";
   }
 }
 
@@ -2120,9 +2124,10 @@ function reconcileAgents(projectGroups) {
         parentGroup.isActive,
       );
       parentLabel.classList.toggle("is-active", parentGroup.isActive);
+      parentLabel.classList.toggle("is-inactive", !parentGroup.isActive);
       parentLabel.dataset.parentKey = parentGroup.key;
       parentLabel.dataset.borderColor = parentCssColor;
-      parentLabel.style.borderColor = parentCssColor;
+      parentLabel.style.borderColor = parentGroup.isActive ? parentCssColor : "";
       parentLabel.style.boxShadow = "";
 
       let digestObject = state.digestObjects.get(parentGroup.key);
