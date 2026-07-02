@@ -297,6 +297,7 @@ test("renders nonblank scene and action inbox", async ({ page }) => {
   expect(sceneDebug.cityRoadSegments).toBeGreaterThanOrEqual(4);
   expect(sceneDebug.cityIntersections).toBeGreaterThanOrEqual(4);
   expect(sceneDebug.lightCycleBikes).toBeGreaterThanOrEqual(2);
+  expect(sceneDebug.lightCycleBikes).toBeLessThanOrEqual(36);
   expect(sceneDebug.lightCycleTrails).toBeGreaterThanOrEqual(2);
   expect(sceneDebug.animatedLightCycles).toBeGreaterThanOrEqual(1);
   await expect(page.locator("#inboxBadge")).toHaveText("2");

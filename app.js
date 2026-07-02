@@ -1736,6 +1736,22 @@ function reconcileLightCycles(projectGroups, placements) {
   }
 }
 
+function reconcileCurrentLightCycles() {
+  if (!state.cityRoadTopology || !state.projectGroups.length) {
+    return;
+  }
+  const roomLayouts = new Map(
+    state.projectGroups.map((projectGroup) => [
+      projectGroup.project,
+      projectRoomLayout(projectGroup.parentGroups),
+    ]),
+  );
+  const roomPlacements = projectRoomPlacements(
+    state.projectGroups.map((projectGroup) => roomLayouts.get(projectGroup.project)),
+  );
+  reconcileLightCycles(state.projectGroups, roomPlacements);
+}
+
 function reconcileRooms(projectGroups) {
   const activeProjects = new Set(projectGroups.map((group) => group.project));
   const roomLayouts = new Map(
@@ -3018,6 +3034,7 @@ function resize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
+  reconcileCurrentLightCycles();
 }
 
 function animate() {
@@ -3106,6 +3123,7 @@ function bindEvents() {
   window.addEventListener("resize", resize);
   reducedMotionQuery.addEventListener("change", (event) => {
     state.reducedMotion = event.matches;
+    reconcileCurrentLightCycles();
     updateSceneVisualStates();
   });
   renderer.domElement.addEventListener("pointerdown", onPointerDown);

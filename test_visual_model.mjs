@@ -943,6 +943,8 @@ assert.equal(cityTrafficBudget({ projectCount: 0, activeProjectCount: 0, viewpor
 assert.equal(cityTrafficBudget({ projectCount: 1, activeProjectCount: 0, viewportWidth: 1200 }), 3);
 assert.equal(cityTrafficBudget({ projectCount: 8, activeProjectCount: 4, viewportWidth: 1600 }), 16);
 assert.equal(cityTrafficBudget({ projectCount: 8, activeProjectCount: 4, viewportWidth: 390 }), 9);
+assert.equal(cityTrafficBudget({ projectCount: 20, activeProjectCount: 12, viewportWidth: 1600 }), 18);
+assert.equal(cityTrafficBudget({ projectCount: 20, activeProjectCount: 12, viewportWidth: 390 }), 9);
 
 const routes = cityBikeRoutes(topology, [
   { project: "codims", x: cityPlacements[0].x, z: cityPlacements[0].z, hasActiveThreads: true, doneCount: 0 },
